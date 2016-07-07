@@ -2689,7 +2689,7 @@ void Parser::Parse_Write(void)
 
     EXPECT_CAT
         CASE5 (SINT8_TOKEN,SINT16BE_TOKEN,SINT16LE_TOKEN,SINT32BE_TOKEN,SINT32LE_TOKEN)
-        CASE3 (UINT8_TOKEN,UINT16BE_TOKEN,UINT16LE_TOKEN)
+        CASE5 (UINT8_TOKEN,UINT16BE_TOKEN,UINT16LE_TOKEN,UINT32BE_TOKEN,UINT32LE_TOKEN)
             {
                 POV_INT32 val_min;
                 POV_INT32 val_max;
@@ -2705,6 +2705,8 @@ void Parser::Parse_Write(void)
                     case UINT16LE_TOKEN: val_min = 0;            val_max = UNSIGNED16_MAX; num_bytes = 2; big_endian = false; break;
                     case SINT32BE_TOKEN: val_min = SIGNED32_MIN; val_max = SIGNED32_MAX;   num_bytes = 4; big_endian = true;  break;
                     case SINT32LE_TOKEN: val_min = SIGNED32_MIN; val_max = SIGNED32_MAX;   num_bytes = 4; big_endian = false; break;
+                    case UINT32BE_TOKEN: val_min = 0;            val_max = UNSIGNED32_MAX; num_bytes = 4; big_endian = true;  break;
+                    case UINT32LE_TOKEN: val_min = 0;            val_max = UNSIGNED32_MAX; num_bytes = 4; big_endian = false; break;
                 }
                 EXPECT_CAT
                     CASE_VECTOR_UNGET

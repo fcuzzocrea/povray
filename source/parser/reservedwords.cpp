@@ -578,6 +578,7 @@ const RESERVED_WORD Reserved_Words[] = {
     { U_STEPS_TOKEN,                "u_steps" },
     { UINT16BE_TOKEN,               "uint16be" },
     { UINT16LE_TOKEN,               "uint16le" },
+    {UINT32BE_TOKEN,                "uint32be"},
     { UINT8_TOKEN,                  "uint8" },
     { ULTRA_WIDE_ANGLE_TOKEN,       "ultra_wide_angle" },
     { UNDEF_TOKEN,                  "undef" },
