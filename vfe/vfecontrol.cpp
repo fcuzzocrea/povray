@@ -47,6 +47,8 @@
 
 #include "vfe.h"
 
+#include "base/branch.h"
+
 /***************************************************************************************/
 /* TODO FIXME: we should call into the POVMS code to do this lookup, but as Thorsten's */
 /* away right now I can't ask him how he would prefer it be implemented. So the below  */

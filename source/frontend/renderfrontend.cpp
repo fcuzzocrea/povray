@@ -50,6 +50,7 @@
 #include "povms/povmscpp.h"
 #include "povms/povmsid.h"
 
+#include "base/branch.h"
 #include "base/fileinputoutput.h"
 #include "base/platformbase.h"
 #include "base/types.h"

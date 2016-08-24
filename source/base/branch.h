@@ -51,7 +51,7 @@
 #define BRANCH_CONTACT          "http://www.lipka-koeln.de"
 #define BRANCH_VERSION          "1.37.1.0"
 #define BRANCH_COPYRIGHT        "Copyright 2013-2016 Christoph Lipka."
-#define BRANCH_PRERELEASE       "alpha.8756563"
+#define BRANCH_PRERELEASE       "alpha.8756588"
 
 /// Primary developers of this branch, in alphabetical order.
 /// Comma-separated list of strings, e.g.
@@ -96,31 +96,6 @@
 
 #endif
 
-
-/// *************************************************************************************************************
-///
-/// @name Patches With Notable Limitations
-///
-/// The following macros enable patches which have known noteworthy limitations.
-///
-/// @{
-///
-
-/// Experimental patch providing a mechanism to persist data between frames in an animation.
-/// Kudos to Christian Froeschlin, who published the basis for this patch on the povray.unofficial.patches newsgroup.
-///
-/// @note     This patch will also persist data between successive renders in a GUI.
-///           Currently, no mechanism has been implemented to force cleanup of persistent data from the GUI.
-///           Cleanup from SDL can be achieved using the @c #undef statement.
-///
-/// @warning  This patch requires parsing to be single-threaded.
-///
-#define EXPERIMENTAL_UPOV_PERSISTENT 1
-
-///
-/// @}
-///
-/// *************************************************************************************************************
 
 #ifdef BRANCH_PRERELEASE
 #define BRANCH_FULL_VERSION BRANCH_VERSION "-" BRANCH_PRERELEASE

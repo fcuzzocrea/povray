@@ -9,6 +9,14 @@
 /// @copyright
 /// @parblock
 ///
+/// UberPOV Raytracer version 1.37.
+/// Portions Copyright 2013-2016 Christoph Lipka.
+///
+/// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
+/// subject to the same licensing terms and conditions.
+///
+/// ----------------------------------------------------------------------------
+///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
 /// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
@@ -72,6 +80,29 @@
     #define POV_PARSER_DEBUG POV_DEBUG
 #endif
 
+/// @}
+///
+//******************************************************************************
+///
+/// @name Patches With Notable Limitations
+///
+/// The following macros enable patches which have known noteworthy limitations.
+///
+/// @{
+///
+
+/// Experimental patch providing a mechanism to persist data between frames in an animation.
+/// Kudos to Christian Froeschlin, who published the basis for this patch on the povray.unofficial.patches newsgroup.
+///
+/// @note     This patch will also persist data between successive renders in a GUI.
+///           Currently, no mechanism has been implemented to force cleanup of persistent data from the GUI.
+///           Cleanup from SDL can be achieved using the @c #undef statement.
+///
+/// @warning  This patch requires parsing to be single-threaded.
+///
+#define EXPERIMENTAL_UPOV_PERSISTENT 1
+
+///
 /// @}
 ///
 //******************************************************************************

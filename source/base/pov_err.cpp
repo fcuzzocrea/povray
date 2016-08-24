@@ -47,6 +47,8 @@
 // C++ variants of standard C header files
 #include <cstring>
 
+#include "base/branch.h"
+
 // this must be the last file included
 #include "base/povdebug.h"
 

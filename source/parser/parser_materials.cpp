@@ -44,6 +44,7 @@
 // Unit header file must be the first file included within POV-Ray *.cpp files (pulls in config)
 #include "parser/parser.h"
 
+#include "base/branch.h"
 #include "base/fileutil.h"
 #include "base/image/image.h"
 #include "base/path.h"

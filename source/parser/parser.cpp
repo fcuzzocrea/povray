@@ -53,6 +53,7 @@
 #include "parser/configparser.h"
 #include "parser/parser.h"
 
+#include "base/branch.h"
 #include "base/fileutil.h"
 
 #include "core/bounding/boundingcylinder.h"
