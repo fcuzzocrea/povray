@@ -46,7 +46,6 @@
 #ifndef POVRAY_BASE_CONFIGBASE_H
 #define POVRAY_BASE_CONFIGBASE_H
 
-#include "branch.h"
 #include "syspovconfigbase.h"
 
 #include <boost/version.hpp>

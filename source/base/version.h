@@ -45,6 +45,7 @@
 #define POVRAY_BASE_VERSION_H
 
 #include "base/configbase.h"
+#include "base/branch.h"
 #include "base/build.h"
 
 // POV-Ray version and copyright message macros
