@@ -1161,18 +1161,21 @@ FINISH *Create_Finish()
     New->Reflection_Max.Clear();
     New->Reflection_Min.Clear();
 
-    New->Reflection_Fresnel     = false;
-    New->Reflection_Falloff     = 1;    /* Added by MBP 8/27/98 */
-    New->Diffuse                = 0.6;
-    New->DiffuseBack            = 0.0;
-    New->Brilliance             = 1.0;
-    New->BrillianceOut          = 1.0;
-    New->BrillianceAdjust       = 1.0;
-    New->BrillianceAdjustRad    = 1.0;
-    New->Phong                  = 0.0;
-    New->Phong_Size             = 40.0;
-    New->Specular               = 0.0;
-    New->Roughness              = 1.0 / 0.05;
+    New->Reflection_Fresnel         = false;
+    New->Reflection_Falloff         = 1;    /* Added by MBP 8/27/98 */
+    New->Diffuse                    = 0.6;
+    New->DiffuseBack                = 0.0;
+    New->Brilliance                 = 1.0;
+    New->BrillianceOut              = 1.0;
+    New->DiffuseAlbedoAdjust        = 1.0;
+    New->DiffuseAlbedoAdjustRad     = 1.0;
+    New->LommelSeeligerWeight       = 0.0;
+    New->OrenNayarA                 = 1.0;
+    New->OrenNayarB                 = 0.0;
+    New->Phong                      = 0.0;
+    New->Phong_Size                 = 40.0;
+    New->Specular                   = 0.0;
+    New->Roughness                  = 1.0 / 0.05;
 
     New->Crand = 0.0;
 
