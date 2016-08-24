@@ -5,11 +5,12 @@
 //
 // UberPOV Raytracer sample file.
 // Created by Christoph Lipka - 2013-08-20
+// Updated by Christoph Lipka - 2016-08-24
 // This file demonstrates the plaintext read feature
 //
 // +w800 +h600 +a0.3
 
-#version 3.7;
+#version unofficial patch 3.7;
 #patch "upov-read-text" 1.0;
 
 global_settings {

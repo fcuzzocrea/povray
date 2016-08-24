@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -39,14 +39,12 @@
 ///
 /// @endparblock
 ///
-//*******************************************************************************
+//******************************************************************************
 
 #ifndef POVRAY_BACKEND_BOUNDINGTASK_H
 #define POVRAY_BACKEND_BOUNDINGTASK_H
 
 #include <vector>
-
-#include <boost/thread.hpp>
 
 #include "backend/frame.h"
 #include "backend/render/rendertask.h"
@@ -55,12 +53,12 @@ namespace pov
 {
 
 class SceneData;
-class SceneThreadData;
+class TraceThreadData;
 
 class BoundingTask : public SceneTask
 {
     public:
-        BoundingTask(shared_ptr<SceneData> sd, unsigned int bt, size_t seed);
+        BoundingTask(shared_ptr<BackendSceneData> sd, unsigned int bt, size_t seed);
         virtual ~BoundingTask();
 
         virtual void Run();
@@ -69,9 +67,9 @@ class BoundingTask : public SceneTask
 
         void AppendObject(ObjectPtr p);
 
-        inline SceneThreadData *GetSceneDataPtr() { return reinterpret_cast<SceneThreadData *>(GetDataPtr()); }
+        inline TraceThreadData *GetSceneDataPtr() { return reinterpret_cast<TraceThreadData *>(GetDataPtr()); }
     private:
-        shared_ptr<SceneData> sceneData;
+        shared_ptr<BackendSceneData> sceneData;
         unsigned int boundingThreshold;
 
         void SendFatalError(pov_base::Exception& e);

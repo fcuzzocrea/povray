@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -43,7 +43,7 @@
 ///
 //******************************************************************************
 
-#include "frame.h"
+#include "backend/frame.h"
 #include "vfe.h"
 
 // this must be the last file included

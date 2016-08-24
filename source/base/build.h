@@ -2,33 +2,39 @@
 ///
 /// @file base/build.h
 ///
-/// This file contains preprocessor defines specifying details of an individual
-/// build.
+/// POV-Ray build-specific information.
+///
+/// This header file contains macros specifying information for a specific
+/// POV-Ray build, and is intended to be customized by people building their own
+/// POV-Ray binaries, while generally remaining unchanged in the official source
+/// code repository.
 ///
 /// @copyright
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Copyright 2013-2014 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
-/// UberPOV is free software: you can redistribute it and/or modify
+/// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
+/// subject to the same licensing terms and conditions.
+///
+/// ----------------------------------------------------------------------------
+///
+/// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
+///
+/// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
 /// published by the Free Software Foundation, either version 3 of the
 /// License, or (at your option) any later version.
 ///
-/// UberPOV is distributed in the hope that it will be useful,
+/// POV-Ray is distributed in the hope that it will be useful,
 /// but WITHOUT ANY WARRANTY; without even the implied warranty of
 /// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 /// GNU Affero General Public License for more details.
 ///
 /// You should have received a copy of the GNU Affero General Public License
 /// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-///
-/// ---------------------------------------------------------------------------
-///
-/// UberPOV is based on the popular Persistence of Vision Ray Tracer
-/// ('POV-Ray') version 3.7, Copyright 1991-2013 Persistence of Vision
-/// Raytracer Pty. Ltd.
 ///
 /// ----------------------------------------------------------------------------
 ///
@@ -40,8 +46,18 @@
 ///
 //******************************************************************************
 
-#ifndef BASE_BUILD_H
-#define BASE_BUILD_H
+#ifndef POVRAY_BASE_BUILD_H
+#define POVRAY_BASE_BUILD_H
+
+#include "base/configbase.h"
+
+// Placeholders for macros injected during automated builds - do not remove or change!
+//{POV_AUTOBUILD_A}
+//{POV_AUTOBUILD_B}
+//{POV_AUTOBUILD_C}
+//{POV_AUTOBUILD_1}
+//{POV_AUTOBUILD_2}
+//{POV_AUTOBUILD_3}
 
 #ifndef POV_RAY_IS_OFFICIAL
 /// Controls whether the build identifies as an official POV-Ray build.
@@ -62,7 +78,7 @@
 /// Specifies the person or organization responsible for this build.
 /// @attention Please set this to your real name, and/or include a working email or website address to contact you.
 #define BUILT_BY "YOUR NAME (YOUR EMAIL)"
-#undef BUILT_BY // remove this once you have filled in the above
+#error Please fill in BUILT_BY, then remove this line
 #endif
 
 #ifndef STANDALONE_BUILD
@@ -74,4 +90,4 @@
 #define STANDALONE_BUILD 0
 #endif
 
-#endif // BASE_BUILD_H
+#endif // POVRAY_BASE_BUILD_H

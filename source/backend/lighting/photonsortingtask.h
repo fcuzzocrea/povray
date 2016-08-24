@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -39,14 +39,15 @@
 ///
 /// @endparblock
 ///
-//*******************************************************************************
+//******************************************************************************
 
 #ifndef PHOTONSORTINGTASK_H
 #define PHOTONSORTINGTASK_H
 
+#include "core/render/trace.h"
+
 #include "backend/frame.h"
 #include "backend/render/rendertask.h"
-#include "backend/render/trace.h"
 
 namespace pov
 {

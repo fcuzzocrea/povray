@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -16,7 +16,7 @@
 /// ---------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2015 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -51,10 +51,11 @@
 #include "backend/frame.h"
 #include "backend/support/task.h"
 
-#include "backend/control/messagefactory.h"
-#include "backend/scene/scene.h"
 #include "base/timer.h"
 #include "base/types.h"
+
+#include "backend/control/messagefactory.h"
+#include "backend/scene/backendscenedata.h"
 
 // this must be the last file included
 #include "base/povdebug.h"
@@ -63,8 +64,6 @@ namespace pov
 {
 
 using namespace pov_base;
-
-IMPLEMENT_THREAD_LOCAL_PTR(Task::TaskData, Task::taskDataPtr, TaskDataCleanup);
 
 Task::Task(TaskData *td, const boost::function1<void, Exception&>& f) :
     taskData(td),
@@ -82,7 +81,6 @@ Task::Task(TaskData *td, const boost::function1<void, Exception&>& f) :
     if (td == NULL)
         throw POV_EXCEPTION_STRING("Internal error: TaskData is NULL in Task constructor");
     td->task = this;
-    SET_THREAD_LOCAL_PTR(taskDataPtr, td);
 }
 
 Task::~Task()
@@ -91,7 +89,6 @@ Task::~Task()
 
     // NOTE: Freeing taskData is the responsiblity of the task creator!
     taskData = NULL;
-    SET_THREAD_LOCAL_PTR(taskDataPtr, NULL);
 }
 
 int Task::FailureCode(int defval)
@@ -115,11 +112,7 @@ POV_LONG Task::ConsumedCPUTime() const
 void Task::Start(const boost::function0<void>& completion)
 {
     if((done == false) && (taskThread == NULL))
-#ifndef USE_OFFICIAL_BOOST
-        taskThread = new boost::thread(boost::bind(&Task::TaskThread, this, completion), 1024 * 1024 * 2); // TODO - make stack size definable
-#else
-        taskThread = new boost::thread(boost::bind(&Task::TaskThread, this, completion));
-#endif
+        taskThread = NewBoostThread(boost::bind(&Task::TaskThread, this, completion), 1024 * 1024 * 2); // TODO - make stack size definable
 }
 
 void Task::RequestStop()
@@ -151,13 +144,13 @@ void Task::Resume()
 
 POV_LONG Task::ElapsedRealTime() const
 {
-    assert(timer != NULL);
+    POV_TASK_ASSERT(timer != NULL);
     return timer->ElapsedRealTime();
 }
 
 POV_LONG Task::ElapsedCPUTime() const
 {
-    assert(timer != NULL);
+    POV_TASK_ASSERT(timer != NULL);
     return timer->ElapsedCPUTime();
 }
 
@@ -267,7 +260,7 @@ void Task::TaskThread(const boost::function0<void>& completion)
 }
 
 
-SceneTask::SceneTask(TaskData *td, const boost::function1<void, Exception&>& f, const char* sn, shared_ptr<SceneData> sd, RenderBackend::ViewId vid) :
+SceneTask::SceneTask(TaskData *td, const boost::function1<void, Exception&>& f, const char* sn, shared_ptr<BackendSceneData> sd, RenderBackend::ViewId vid) :
     Task(td, f),
     messageFactory(sd->warningLevel, sn, sd->backendAddress, sd->frontendAddress, sd->sceneId, vid)
 {}

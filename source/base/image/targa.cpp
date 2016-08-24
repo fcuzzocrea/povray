@@ -2,14 +2,13 @@
 ///
 /// @file base/image/targa.cpp
 ///
-/// This module contains the code to read and write the Targa output file
-/// format.
+/// Implementation of Targa (TGA) image file handling.
 ///
 /// @copyright
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -17,7 +16,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2015 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -62,15 +61,15 @@
 *
 *****************************************************************************/
 
+// Unit header file must be the first file included within POV-Ray *.cpp files (pulls in config)
+#include "base/image/targa.h"
+
+// Standard C++ header files
 #include <vector>
 
-// configbase.h must always be the first POV file included within base *.cpp files
-#include "base/configbase.h"
-#include "base/image/image.h"
-#include "base/image/targa.h"
+// POV-Ray base header files
 #include "base/types.h"
-
-#include "metadata.h"
+#include "base/image/metadata.h"
 
 // this must be the last file included
 #include "base/povdebug.h"
@@ -517,8 +516,8 @@ Image *Read (IStream *file, const Image::ReadOptions& options)
     // We presume non-premultiplied alpha, so that's the preferred mode to use for the image container unless the user overrides
     // (e.g. to handle a non-compliant file).
     bool premul = false;
-    if (options.premultiplyOverride)
-        premul = options.premultiply;
+    if (options.premultipliedOverride)
+        premul = options.premultiplied;
 
     if (!file->read (tgaheader, 18))
         throw POV_EXCEPTION(kFileDataErr, "Cannot read targa file header");

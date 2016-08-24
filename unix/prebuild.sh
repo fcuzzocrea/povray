@@ -42,7 +42,7 @@
 #
 # ---------------------------------------------------------------------------
 # UberPOV Raytracer version 1.37.
-# Portions Copyright 2013 Christoph Lipka.
+# Portions Copyright 2013-2016 Christoph Lipka.
 #
 # UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 # subject to the same licensing terms and conditions.
@@ -165,6 +165,11 @@ echo "make maintainer-clean" 1>&2  &&  make maintainer-clean 1>&2 ; \
     $pov_binary.ini.in scenes/ scripts/ VERSION
   do
     rm -r ../$file 2> /dev/null  &&  echo "Cleanup ../$file"
+  done
+  # cleanup stuff added by automake
+  for file in config.guess config.sub depcomp install-sh missing
+  do
+    rm config/$file 2> /dev/null  &&  echo "Cleanup config/$file"
   done
   ;;
 
@@ -449,12 +454,10 @@ ${pov_binary}_SOURCES = \\
 
 # Include paths for headers.
 AM_CPPFLAGS = \\
+  -I\$(top_srcdir)/unix/povconfig \\
   -I\$(top_srcdir) \\
   -I\$(top_srcdir)/source \\
   -I\$(top_builddir)/source \\
-  -I\$(top_srcdir)/source/backend \\
-  -I\$(top_srcdir)/source/base \\
-  -I\$(top_srcdir)/source/frontend \\
   -I\$(top_srcdir)/vfe \\
   -I\$(top_srcdir)/vfe/unix
 
@@ -751,7 +754,7 @@ aclocal -I .
 autoheader --warnings=all
 
 # Create all Makefile.in's from Makefile.am's
-automake --add-missing --warnings=all ###--ignore-deps
+automake --add-missing --warnings=all
 
 # Create configure from configure.ac
 autoconf --warnings=all
@@ -817,10 +820,8 @@ libpovray_a_SOURCES = \\
 
 # Include paths for headers.
 AM_CPPFLAGS = \\
+  -I\$(top_srcdir)/unix/povconfig \\
   -I\$(top_srcdir) \\
-  -I\$(top_srcdir)/source/backend \\
-  -I\$(top_srcdir)/source/base \\
-  -I\$(top_srcdir)/source/frontend \\
   -I\$(top_srcdir)/unix \\
   -I\$(top_srcdir)/vfe \\
   -I\$(top_srcdir)/vfe/unix
@@ -1305,10 +1306,6 @@ case "$1" in
   ;;
 
   *)
-  if test -d $dir/boost; then
-    echo "Removing $dir/boost"
-    rm -rf $dir/boost
-  fi
   ;;
 esac
 
@@ -1354,11 +1351,10 @@ libvfe_a_SOURCES = \\
 
 # Include paths for headers.
 AM_CPPFLAGS = \\
+  -I\$(top_srcdir)/unix/povconfig \\
   -I\$(top_srcdir)/vfe/unix \\
   -I\$(top_srcdir)/unix \\
-  -I\$(top_srcdir)/source \\
-  -I\$(top_srcdir)/source/base \\
-  -I\$(top_srcdir)/source/backend
+  -I\$(top_srcdir)/source
 
 # Extra definitions for compiling.
 # They cannot be placed in config.h since they indirectly rely on \$prefix.

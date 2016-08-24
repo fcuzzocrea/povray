@@ -5,6 +5,7 @@
 //
 // UberPOV Raytracer sample file.
 // Created by Christoph Lipka - 2013-08-23
+// Updated by Christoph Lipka - 2016-08-24
 // This file demonstrates the stochastic anti-aliasing mode.
 //
 // +w800 +h600 -a
@@ -12,10 +13,11 @@
 // +w800 +h600 +am3 +a0.1  +ac0.9 +r3
 // +w800 +h600 +am3 +a0.03 +ac0.9 +r4
 
+#version 3.7;
+
 // also toy around with this:
 #declare Focal_Blur = no;
 
-#version 3.7;
 global_settings{ assumed_gamma 1.0 }
 
 camera {

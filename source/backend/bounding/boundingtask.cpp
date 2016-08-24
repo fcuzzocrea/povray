@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -16,7 +16,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2015 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -39,7 +39,7 @@
 ///
 /// @endparblock
 ///
-//*******************************************************************************
+//******************************************************************************
 
 #include <set>
 
@@ -50,15 +50,15 @@
 #include "backend/frame.h"
 #include "backend/bounding/boundingtask.h"
 
-#include "backend/math/matrices.h"
-#include "backend/scene/objects.h"
-#include "backend/scene/scene.h"
-#include "backend/scene/threaddata.h"
-#include "backend/shape/cones.h"
-#include "backend/support/bsptree.h"
-#include "backend/texture/pigment.h"
-#include "backend/texture/texture.h"
-#include "base/povmsgid.h"
+#include "core/math/matrix.h"
+#include "core/scene/object.h"
+#include "core/scene/tracethreaddata.h"
+#include "core/support/bsptree.h"
+
+#include "povms/povmsid.h"
+
+#include "backend/scene/backendscenedata.h"
+#include "backend/support/task.h"
 
 // this must be the last file included
 #include "base/povdebug.h"
@@ -113,7 +113,8 @@ class SceneObjects : public BSPTree::Objects
 class BSPProgress : public BSPTree::Progress
 {
     public:
-        BSPProgress(RenderBackend::SceneId sid, POVMSAddress addr) :
+        BSPProgress(RenderBackend::SceneId sid, POVMSAddress addr, Task& task) :
+            mTask(task),
             sceneId(sid),
             frontendAddress(addr),
             lastProgressTime(0)
@@ -129,12 +130,13 @@ class BSPProgress : public BSPTree::Progress
                 obj.SetLong(kPOVAttrib_CurrentNodeCount, nodes);
                 RenderBackend::SendSceneOutput(sceneId, frontendAddress, kPOVMsgIdent_Progress, obj);
 
-                Task::CurrentTaskCooperate();
+                mTask.Cooperate();
 
                 lastProgressTime = timer.ElapsedRealTime();
             }
         }
     private:
+        Task& mTask;
         RenderBackend::SceneId sceneId;
         POVMSAddress frontendAddress;
         Timer timer;
@@ -143,8 +145,8 @@ class BSPProgress : public BSPTree::Progress
         BSPProgress();
 };
 
-BoundingTask::BoundingTask(shared_ptr<SceneData> sd, unsigned int bt, size_t seed) :
-    SceneTask(new SceneThreadData(sd, seed), boost::bind(&BoundingTask::SendFatalError, this, _1), "Bounding", sd),
+BoundingTask::BoundingTask(shared_ptr<BackendSceneData> sd, unsigned int bt, size_t seed) :
+    SceneTask(new TraceThreadData(dynamic_pointer_cast<SceneData>(sd), seed), boost::bind(&BoundingTask::SendFatalError, this, _1), "Bounding", sd),
     sceneData(sd),
     boundingThreshold(bt)
 {
@@ -176,7 +178,7 @@ void BoundingTask::Run()
         {
             // new BSP tree code
             SceneObjects objects(sceneData->objects);
-            BSPProgress progress(sceneData->sceneId, sceneData->frontendAddress);
+            BSPProgress progress(sceneData->sceneId, sceneData->frontendAddress, *this);
 
             sceneData->objects.clear();
             sceneData->objects.insert(sceneData->objects.end(), objects.finite.begin(), objects.finite.end());
@@ -208,7 +210,7 @@ void BoundingTask::Stopped()
 
 void BoundingTask::Finish()
 {
-    GetSceneDataPtr()->timeType = SceneThreadData::kBoundingTime;
+    GetSceneDataPtr()->timeType = TraceThreadData::kBoundingTime;
     GetSceneDataPtr()->realTime = ConsumedRealTime();
     GetSceneDataPtr()->cpuTime = ConsumedCPUTime();
 }

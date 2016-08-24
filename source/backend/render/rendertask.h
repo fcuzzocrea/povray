@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -39,7 +39,7 @@
 ///
 /// @endparblock
 ///
-//*******************************************************************************
+//******************************************************************************
 
 #ifndef POVRAY_BACKEND_RENDERTASK_H
 #define POVRAY_BACKEND_RENDERTASK_H
@@ -62,7 +62,7 @@ class RenderTask : public SceneTask
         virtual void Run() = 0;
         virtual void Stopped() = 0;
 
-        shared_ptr<SceneData>& GetSceneData();
+        shared_ptr<BackendSceneData>& GetSceneData();
         ViewData *GetViewData();
 
         inline ViewThreadData *GetViewDataPtr() { return reinterpret_cast<ViewThreadData *>(GetDataPtr()); }

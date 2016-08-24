@@ -14,7 +14,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -22,7 +22,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2014 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -47,22 +47,17 @@
 ///
 //******************************************************************************
 
-/// @file
-/// @todo   Maybe we want to move the version information stuff to a separate file,
-///         preferably in the `base` directory.
-
 #ifndef POVRAY_BACKEND_POVRAY_H
 #define POVRAY_BACKEND_POVRAY_H
 
-// Please put everything that isn't a preprocessor directive in this
-// file into SKIP_COMPLEX_OPTOUT_H sections like the one below! [trf]
-#ifndef SKIP_COMPLEX_OPTOUT_H
-
 #include "base/build.h"
 #include "base/branch.h"
-#include "base/povms.h"
 #include <boost/thread.hpp>
 #include <boost/function.hpp>
+
+#include "povms/povmscpp.h"
+
+#include "base/version.h"
 
 /**
  *  This function does essential initialisation that is required before
@@ -87,85 +82,29 @@ void povray_terminate();
  */
 bool povray_terminated();
 
-#endif // SKIP_COMPLEX_OPTOUT_H
-
 #define DAYS(n)         (86400 * n)
 
 // POV-Ray version and copyright message macros
 
-#define POV_RAY_COPYRIGHT "Copyright 1991-2015 Persistence of Vision Raytracer Pty. Ltd."
-#define OFFICIAL_VERSION_STRING "3.7.1"
-#define OFFICIAL_VERSION_NUMBER 371
-#define OFFICIAL_VERSION_NUMBER_HEX 0x0371
-
-#define POV_RAY_PRERELEASE "alpha.7974983"
-
-#define POV_RAY_EDITOR_VERSION "3.7.0"
-
-
-#ifdef BRANCH_NAME
-
-#if POV_RAY_IS_OFFICIAL == 1
-#error A branch build cannot be an official POV-Ray build.
-#endif
-
-#ifdef POV_RAY_PRERELEASE
-#define POV_RAY_VERSION OFFICIAL_VERSION_STRING "-" POV_RAY_PRERELEASE
-#else
-#define POV_RAY_VERSION OFFICIAL_VERSION_STRING
-#endif
-
-#define POV_RAY_IS_BRANCH 1
-
-#if STANDALONE_BUILD == 1
-    #define STANDALONE_VER ".stalone"
-    #define REGCURRENT_VERSION BRANCH_FULL_VERSION
-#else
-    #define STANDALONE_VER ""
-    #define REGCURRENT_VERSION POV_RAY_VERSION "-" BRANCH_NAME "-" BRANCH_FULL_VERSION
-#endif
-
-#else
-
-#if POV_RAY_IS_OFFICIAL == 1
-#ifdef POV_RAY_PRERELEASE
-#define POV_RAY_VERSION OFFICIAL_VERSION_STRING "-" POV_RAY_PRERELEASE
-#else
-#define POV_RAY_VERSION OFFICIAL_VERSION_STRING
-#endif
-#else
-#ifdef POV_RAY_PRERELEASE
-#define POV_RAY_VERSION OFFICIAL_VERSION_STRING "-" POV_RAY_PRERELEASE ".unofficial"
-#else
-#define POV_RAY_VERSION OFFICIAL_VERSION_STRING "-unofficial"
-#endif
-#endif
-
-#define BRANCH_NAME                 "POV-Ray"
-#define BRANCH_FULL_NAME            "Persistence of Vision Raytracer(tm)"
-#define BRANCH_MAINTAINER           "the POV-Ray Team"
-#define BRANCH_CONTACT              "http://www.povray.org"
-#define BRANCH_VERSION              OFFICIAL_VERSION
-#define BRANCH_FULL_VERSION         POV_RAY_VERSION
-#define BRANCH_COPYRIGHT            POV_RAY_COPYRIGHT
-#define BRANCH_BUILD_IS_OFFICIAL    POV_RAY_IS_OFFICIAL
-#define POV_RAY_IS_BRANCH           0
-
-#define STANDALONE_VER ""
-#define REGCURRENT_VERSION POV_RAY_VERSION
-
-#endif
-
-
 #if POV_RAY_IS_OFFICIAL == 1
 
-#ifdef DISTRIBUTION_MESSAGE_2
-#undef DISTRIBUTION_MESSAGE_2
-#endif
+#if POV_RAY_IS_AUTOBUILD == 1
+#define DISTRIBUTION_MESSAGE_1 "This is an official automated build authorized by the POV-Ray Team."
+#else // POV_RAY_IS_AUTOBUILD
+#define DISTRIBUTION_MESSAGE_1 "This is an official version prepared by the POV-Ray Team."
+#endif // POV_RAY_IS_AUTOBUILD
+#define DISTRIBUTION_MESSAGE_2 "See the documentation on how to contact the authors or visit us"
+#define DISTRIBUTION_MESSAGE_3 "on the internet at http://www.povray.org/\n"
 
-#define DISTRIBUTION_MESSAGE_1 "This is an official version prepared by the POV-Ray Team. See the"
-#define DISTRIBUTION_MESSAGE_2 "documentation on how to contact the authors or visit us on the"
-#define DISTRIBUTION_MESSAGE_3 "internet at http://www.povray.org/\n"
+#elif POV_RAY_IS_SEMI_OFFICIAL == 1
+
+#if POV_RAY_IS_AUTOBUILD == 1
+#define DISTRIBUTION_MESSAGE_1 "This is an automated development build authorized by:"
+#else // POV_RAY_IS_AUTOBUILD
+#define DISTRIBUTION_MESSAGE_1 "This is a development version compiled by:"
+#endif // POV_RAY_IS_AUTOBUILD
+#define DISTRIBUTION_MESSAGE_2 BUILT_BY
+#define DISTRIBUTION_MESSAGE_3 "The POV-Ray Team does not officially support this version.\n"
 
 #elif BRANCH_BUILD_IS_OFFICIAL == 1
 
@@ -191,5 +130,11 @@ bool povray_terminated();
 
 #define DISCLAIMER_MESSAGE_1 "This is free software; see the source for copying conditions.  There is NO"
 #define DISCLAIMER_MESSAGE_2 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+
+#if (POV_RAY_IS_OFFICIAL == 1) && (POV_RAY_IS_AUTOBUILD != 1)
+#define POV_RAY_HAS_OFFICIAL_FEATURES 1
+#else
+#define POV_RAY_HAS_OFFICIAL_FEATURES 0
+#endif
 
 #endif // POVRAY_BACKEND_POVRAY_H

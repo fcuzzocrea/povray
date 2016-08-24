@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -16,7 +16,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2015 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -39,7 +39,7 @@
 ///
 /// @endparblock
 ///
-//*******************************************************************************
+//******************************************************************************
 
 #ifndef POVRAY_FRONTEND_RENDERFRONTEND_H
 #define POVRAY_FRONTEND_RENDERFRONTEND_H
@@ -54,13 +54,14 @@
 #include <boost/function.hpp>
 #include <boost/scoped_ptr.hpp>
 
+#include "povms/povmscpp.h"
+#include "povms/povmsid.h"
+
 #include "base/path.h"
-#include "base/povms.h"
-#include "base/povmscpp.h"
-#include "base/povmsgid.h"
 #include "base/stringutilities.h"
 #include "base/textstreambuffer.h"
 #include "base/types.h"
+#include "base/image/colourspace.h"
 #include "base/image/image.h"
 
 #include "frontend/configfrontend.h"
@@ -125,7 +126,7 @@ struct SceneData
     {
         int legacyGammaMode;
         // TODO FIXME - conversion from working gamma to linear should be moved to back-end
-        int workingGammaType;
+        GammaTypeId workingGammaType;
         float workingGamma;
     } backwardCompatibilityData;
 };
@@ -513,8 +514,8 @@ RenderFrontendBase::ViewId RenderFrontend<PARSER_MH, FILE_MH, RENDER_MH, IMAGE_M
                     throw POV_EXCEPTION_STRING("Unknown gamma handling mode in CreateView()");
             }
 
-            int     dispGammaType   = obj.TryGetInt   (kPOVAttrib_DisplayGammaType, DEFAULT_DISPLAY_GAMMA_TYPE);
-            float   dispGamma       = obj.TryGetFloat (kPOVAttrib_DisplayGamma,     DEFAULT_DISPLAY_GAMMA);
+            GammaTypeId dispGammaType   = (GammaTypeId) obj.TryGetInt   (kPOVAttrib_DisplayGammaType, DEFAULT_DISPLAY_GAMMA_TYPE);
+            float       dispGamma       =               obj.TryGetFloat (kPOVAttrib_DisplayGamma,     DEFAULT_DISPLAY_GAMMA);
 
             switch (shi->second.data.backwardCompatibilityData.legacyGammaMode)
             {
@@ -852,7 +853,7 @@ template<class PARSER_MH, class FILE_MH, class RENDER_MH, class IMAGE_MH>
 void RenderFrontend<PARSER_MH, FILE_MH, RENDER_MH, IMAGE_MH>::GetBackwardCompatibilityData(SceneData& sd, POVMS_Object& msg)
 {
     sd.backwardCompatibilityData.legacyGammaMode = msg.TryGetInt(kPOVAttrib_LegacyGammaMode, kPOVList_GammaMode_None); // TODO FIXME - default shouldn't be hard-coded in here.
-    sd.backwardCompatibilityData.workingGammaType = msg.TryGetInt(kPOVAttrib_WorkingGammaType, DEFAULT_WORKING_GAMMA_TYPE);
+    sd.backwardCompatibilityData.workingGammaType = (GammaTypeId)msg.TryGetInt(kPOVAttrib_WorkingGammaType, DEFAULT_WORKING_GAMMA_TYPE);
     sd.backwardCompatibilityData.workingGamma = msg.TryGetFloat(kPOVAttrib_WorkingGamma, DEFAULT_WORKING_GAMMA);
 }
 

@@ -168,13 +168,21 @@ Persistent Variables:
     same name, with global variables taking precedence over persistent ones,
     just like local variables take precedence over global ones.
 
+    In addition, UberPOV allows the following syntax wherever an identifier is
+    allowed or expected:
+
+        persistent ( IDENTIFIER )
+
+    This syntax will specifically access the persistent variable of the given
+    name, ignoring any global or local variables.
+
     Known caveats:
 
       - At present, random number streams cannot be made persistent yet.
 
     This syntax extension can be tested for using the #patch directive or
     patch() function with the patch name "upov-persistent"; the current
-    implementation is version 0.1.
+    implementation is version 0.2.
 
 Glare Desaturation:
 -------------------

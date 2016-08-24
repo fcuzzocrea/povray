@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Copyright 2013-2015 Christoph Lipka.
+/// Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -49,8 +49,8 @@
 #define BRANCH_MAINTAINER       "Christoph Lipka"
 #define BRANCH_CONTACT          "http://www.lipka-koeln.de"
 #define BRANCH_VERSION          "1.37.1.0"
-#define BRANCH_COPYRIGHT        "Copyright 2013-2015 Christoph Lipka."
-#define BRANCH_PRERELEASE       "alpha"
+#define BRANCH_COPYRIGHT        "Copyright 2013-2016 Christoph Lipka."
+#define BRANCH_PRERELEASE       "alpha.8755771"
 
 /// Primary developers of this branch, in alphabetical order.
 /// Comma-separated list of strings, e.g.

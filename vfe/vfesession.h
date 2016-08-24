@@ -11,7 +11,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -19,7 +19,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2015 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -48,6 +48,9 @@
 #define __VFESESSION_H__
 
 #include <queue>
+
+#include <boost/thread.hpp>
+#include <boost/thread/condition.hpp>
 
 #include "base/image/colourspace.h"
 
@@ -428,16 +431,17 @@ namespace vfe
       {
         public:
           StatusMessage(const vfeSession& session) :
-            MessageBase(session), m_Delay(0), m_Frame(0), m_TotalFrames(0) {}
+            MessageBase(session), m_Delay(0), m_Frame(0), m_TotalFrames(0), m_FrameId(0) {}
           StatusMessage(const vfeSession& session, string msg, int m_Delay) :
-            MessageBase(session, mGenericStatus, msg), m_Delay(m_Delay), m_Frame(0), m_TotalFrames(0) {}
-          StatusMessage(const vfeSession& session, const UCS2String& file, int frame, int totalframes) :
-            MessageBase(session, mAnimationStatus), m_Delay(0), m_Filename(file), m_Frame(frame), m_TotalFrames(totalframes) {}
+            MessageBase(session, mGenericStatus, msg), m_Delay(m_Delay), m_Frame(0), m_TotalFrames(0), m_FrameId(0) {}
+          StatusMessage(const vfeSession& session, const UCS2String& file, int frame, int totalframes, int frameId) :
+            MessageBase(session, mAnimationStatus), m_Delay(0), m_Filename(file), m_Frame(frame), m_TotalFrames(totalframes), m_FrameId(frameId) {}
           virtual ~StatusMessage() {}
 
           int m_Delay;
           int m_Frame;
           int m_TotalFrames;
+          int m_FrameId;
           UCS2String m_Filename;
       } ;
 
@@ -677,6 +681,11 @@ namespace vfe
       // Returns true if an animation is being rendered. The result can only
       // be considered valid if the render has actually been started.
       virtual bool RenderingAnimation() const { return m_RenderingAnimation; }
+
+      // Returns the current nominal frame number. Valid once the internal
+      // state has reached kStatring. The typical way of reading this is to wait
+      // for a stAnimationStatus flag and then call GetCurrentFrameId().
+      virtual int GetCurrentFrameId() const { return m_CurrentFrameId; }
 
       // Returns the current frame of an animation. Only valid once the internal
       // state has reached kStarting (see the stBackendStateChanged status flag).
@@ -1123,7 +1132,7 @@ namespace vfe
       virtual void AppendStreamMessage (MessageType type, const boost::format& fmt, bool chompLF = false);
       virtual void AppendErrorMessage (const string& Msg, const UCS2String& File, int Line = 0, int Col = 0);
       virtual void AppendWarningMessage (const string& Msg, const UCS2String& File, int Line = 0, int Col = 0);
-      virtual void AppendAnimationStatus (int Frame, int Total, const UCS2String& Filename);
+      virtual void AppendAnimationStatus (int FrameId, int SubsetFrame, int SubsetTotal, const UCS2String& Filename);
 
       virtual void SetUsingAlpha() { m_UsingAlpha = true ; }
       virtual void SetClocklessAnimation() { m_ClocklessAnimation = true ; }
@@ -1222,6 +1231,7 @@ namespace vfe
       int m_PercentComplete;
       int m_PixelsRendered;
       int m_TotalPixels;
+      int m_CurrentFrameId;
       int m_CurrentFrame;
       int m_TotalFrames;
       bool m_Failed;

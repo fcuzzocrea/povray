@@ -6,34 +6,22 @@ Compiling and installing UberPOV for Unix from sources.
 Please report bugs to the POV-Ray unofficial patches forum at
 news://news.povray.org/povray.unofficial.patches/ or
 http://news.povray.org/povray.unofficial.patches/
-
--------------------------------------------------------------------------------
-$File: //depot/clipka/upov/unix/install.txt $
-$Revision: #5 $
-$Change: 6087 $
-$DateTime: 2013/11/11 03:53:39 $
-$Author: clipka $
 ===============================================================================
 
++----------------------------------------------------------------------------+
+| NOTE: If this file does not reside in the root directory of your UberPOV   |
+| source package, you have received a platform-neutral package. In that case |
+| make sure to run the following command before you proceed:                 |
+|                                                                            |
+|   cd unix/ ; ./prebuild.sh ; cd ../                                        |
++----------------------------------------------------------------------------+
+
 Table of contents
-  0. Preparing the UNIX/Linux source distribution
   1. Quick start
   2. Software requirements
   3. Configuring, building, and (un)installing UberPOV
   4. Additional configure options
   5. Reporting bugs
-
-
-===============================================
-0. Preparing the UNIX/Linux source distribution
-===============================================
-
-Currently, there is no dedicated UberPOV UNIX/Linux source distribution package;
-you can (and will need to) prepare such a package yourself from the generic
-source distribution package. Change to the "unix" subdirectory and run the
-following command:
-
-  ./prebuild.sh
 
 
 ==============
@@ -147,6 +135,13 @@ recommanded to generate a fully-featured UberPOV executable.
 
 - SDL version 1.2 or above (used for the display preview)
   http://www.libsdl.org
+
+
+2.3 Compatibility issues
+    ====================
+
+- Boost version 1.46 has been reported to be unstable on the Raspberry Pi 2. We recommend using Boost version 1.50 on
+  this platform.
 
 
 ====================================================

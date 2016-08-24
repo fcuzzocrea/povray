@@ -5,6 +5,7 @@
 //
 // UberPOV Raytracer sample file.
 // Created by Christoph Lipka - 2013-08-23
+// Updated by Christoph Lipka - 2016-08-24
 // This file demonstrates reflection blur.
 //
 // +w800 +h600 -a
@@ -12,11 +13,11 @@
 // +w800 +h600 +am3 +a0.1  +ac0.9  +r3
 // +w800 +h600 +am3 +a0.01 +ac0.99 +r6
 
-// also toy around with this:
-#declare Focal_Blur = no;
-
 #version unofficial patch 3.7;
 #patch "upov-reflection-roughness" 0.9;
+
+// also toy around with this:
+#declare Focal_Blur = no;
 
 global_settings {
   max_trace_level 25

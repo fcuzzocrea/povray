@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2015 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -39,7 +39,7 @@
 ///
 /// @endparblock
 ///
-//*******************************************************************************
+//******************************************************************************
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
@@ -50,9 +50,10 @@
 
 #include "base/timer.h"
 #include "base/types.h"
-#include "backend/scene/scene.h"
-#include "backend/scene/threaddata.h"
+
+#include "backend/scene/backendscenedata.h"
 #include "backend/scene/view.h"
+#include "backend/scene/viewthreaddata.h"
 
 // this must be the last file included
 #include "base/povdebug.h"
@@ -64,7 +65,7 @@ using namespace pov_base;
 
 RadiosityTask::RadiosityTask(ViewData *vd, DBL ptsz, DBL ptesz, unsigned int pts, unsigned int ptsc, unsigned int nt, bool hr, size_t seed) :
     RenderTask(vd, seed, "Radiosity", vd->GetViewId()),
-    trace(vd, GetViewDataPtr(), vd->GetSceneData()->parsedMaxTraceLevel, vd->GetSceneData()->parsedAdcBailout,
+    trace(vd->GetSceneData(), &vd->GetCamera(), GetViewDataPtr(), vd->GetSceneData()->parsedMaxTraceLevel, vd->GetSceneData()->parsedAdcBailout,
           vd->GetQualityFeatureFlags(), cooperate, media, radiosity, !vd->GetSceneData()->radiositySettings.vainPretrace),
     cooperate(*this),
     media(GetViewDataPtr(), &trace, &photonGatherer),
@@ -261,7 +262,7 @@ void RadiosityTask::Stopped()
 
 void RadiosityTask::Finish()
 {
-    GetViewDataPtr()->timeType = SceneThreadData::kRadiosityTime;
+    GetViewDataPtr()->timeType = TraceThreadData::kRadiosityTime;
     GetViewDataPtr()->realTime = ConsumedRealTime();
     GetViewDataPtr()->cpuTime = ConsumedCPUTime();
 }

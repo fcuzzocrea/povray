@@ -5,7 +5,7 @@
 #
 # ---------------------------------------------------------------------------
 # UberPOV Raytracer version 1.37.
-# Portions Copyright 2013 Christoph Lipka.
+# Portions Copyright 2013-2016 Christoph Lipka.
 #
 # UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 # subject to the same licensing terms and conditions.
@@ -163,7 +163,7 @@ This is an unofficial version compiled by:
  $COMPILED_BY
 The POV-Ray Team(tm) is not responsible for supporting this version.])
 
-AC_DEFINE_UNQUOTED([BUILT_BY], [" $COMPILED_BY"], [Who compiled this binary.])
+AC_DEFINE_UNQUOTED([BUILT_BY], ["$COMPILED_BY"], [Who compiled this binary.])
 
 
 ###############################################################################
@@ -566,6 +566,10 @@ esac
 AC_HEADER_TIME
 AC_CHECK_HEADERS([time.h limits.h sys/resource.h sys/time.h sys/wait.h unistd.h])
 
+AC_TYPE_INT8_T
+AC_TYPE_INT16_T
+AC_TYPE_INT32_T
+AC_TYPE_INT64_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
 
@@ -670,13 +674,13 @@ if test x"$C99_COMPATIBLE_RADIOSITY" != x"" || test x"$ac_cv_sizeof_int" != x"4"
   )
   if test x"$C99_COMPATIBLE_RADIOSITY" = x""; then  # auto-detection
     AC_CHECK_FUNCS([ilogbf],
-      [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [2], [See source/octree.cpp for details.])],
+      [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [2], [See source/backend/support/octree.cpp for details.])],
       [AC_CHECK_FUNCS([ilogb],
-         [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [4], [See source/octree.cpp for details.])],
+         [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [4], [See source/backend/support/octree.cpp for details.])],
          [AC_CHECK_FUNCS([logbf],
-            [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [1], [See source/octree.cpp for details.])],
+            [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [1], [See source/backend/support/octree.cpp for details.])],
             [AC_CHECK_FUNCS([logb],
-               [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [3], [See source/octree.cpp for details.])],
+               [AC_DEFINE([C99_COMPATIBLE_RADIOSITY], [3], [See source/backend/support/octree.cpp for details.])],
                [AC_MSG_ERROR([
 *** Cannot find a 'logb' or equivalent function required for non-ieee platform
 ])]
@@ -694,7 +698,7 @@ if test x"$C99_COMPATIBLE_RADIOSITY" != x"" || test x"$ac_cv_sizeof_int" != x"4"
     esac
     AC_DEFINE_UNQUOTED([C99_COMPATIBLE_RADIOSITY],
       [$C99_COMPATIBLE_RADIOSITY],
-      [See source/octree.cpp for details.]
+      [See source/backend/support/octree.cpp for details.]
     )
   fi
 fi

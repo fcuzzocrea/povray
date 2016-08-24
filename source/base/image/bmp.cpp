@@ -2,9 +2,7 @@
 ///
 /// @file base/image/bmp.cpp
 ///
-/// @todo   What's in here?
-///
-/// This module contains the code to read and write the BMP file format.
+/// Implementation of Windows Bitmap (BMP) image file handling.
 ///
 /// @author Wlodzimierz ABX Skiba (abx@abx.art.pl)
 ///
@@ -12,7 +10,7 @@
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -20,7 +18,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2015 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -45,6 +43,19 @@
 ///
 //******************************************************************************
 
+// Unit header file must be the first file included within POV-Ray *.cpp files (pulls in config)
+#include "base/image/bmp.h"
+
+// Standard C++ header files
+#include <vector>
+
+// POV-Ray base header files
+#include "base/types.h"
+
+// this must be the last file included
+#include "base/povdebug.h"
+
+
 /*****************************************************************************
 * Local preprocessor defines
 ******************************************************************************/
@@ -55,16 +66,6 @@
 #define BI_RLE8     1L
 #define BI_RLE4     2L
 
-#include <vector>
-
-// configbase.h must always be the first POV file included within base *.cpp files
-#include "base/configbase.h"
-#include "base/image/image.h"
-#include "base/image/bmp.h"
-#include "base/types.h"
-
-// this must be the last file included
-#include "base/povdebug.h"
 
 namespace pov_base
 {
@@ -103,7 +104,7 @@ static inline unsigned char Read_Safe_Char (IStream& in)
 {
     unsigned char ch;
 
-    in >> ch;
+    ch = in.Read_Byte();
     if (!in)
         throw POV_EXCEPTION(kFileDataErr, "Error reading data from BMP image.") ;
 
@@ -489,7 +490,8 @@ void Write (OStream *file, const Image *image, const Image::WriteOptions& option
 
     int count = (width * (alpha ? 32 : 24) + 31) / 32 * 4 * height;
 
-    *file << 'B' << 'M' ;
+    file->Write_Byte('B');
+    file->Write_Byte('M');
     Write_Long (file, 14 + 40 + count) ;
     Write_Short (file, 0) ;
     Write_Short (file, 0) ;
@@ -515,15 +517,15 @@ void Write (OStream *file, const Image *image, const Image::WriteOptions& option
             else
                 GetEncodedRGBValue (image, x, y, gamma, 255, r, g, b, *dither, options.glareDesaturation);
 
-            *file << (unsigned char) b;
-            *file << (unsigned char) g;
-            *file << (unsigned char) r;
+            file->Write_Byte((unsigned char) b);
+            file->Write_Byte((unsigned char) g);
+            file->Write_Byte((unsigned char) r);
             if (alpha)
-                *file << (unsigned char) a;
+                file->Write_Byte((unsigned char) a);
         }
         if (!alpha)
             for (int i = 0 ; i < pad; i++)
-                *file << (unsigned char) 0 ;
+                file->Write_Byte((unsigned char) 0);
     }
 
     if (!*file)
@@ -555,8 +557,8 @@ Image *Read (IStream *file, const Image::ReadOptions& options)
     // We presume non-premultiplied alpha, so that's the preferred mode to use for the image container unless the user overrides
     // (e.g. to handle a non-compliant file).
     bool premul = false;
-    if (options.premultiplyOverride)
-        premul = options.premultiply;
+    if (options.premultipliedOverride)
+        premul = options.premultiplied;
 
     if ((file->Read_Byte () != 'B') || (file->Read_Byte () !='M'))
         throw POV_EXCEPTION(kFileDataErr, "Error reading magic number of BMP image");

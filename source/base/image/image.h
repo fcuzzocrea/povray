@@ -2,13 +2,13 @@
 ///
 /// @file base/image/image.h
 ///
-/// @todo   What's in here?
+/// Declarations related to image containers.
 ///
 /// @copyright
 /// @parblock
 ///
 /// UberPOV Raytracer version 1.37.
-/// Portions Copyright 2013-2014 Christoph Lipka.
+/// Portions Copyright 2013-2016 Christoph Lipka.
 ///
 /// UberPOV 1.37 is an experimental unofficial branch of POV-Ray 3.7, and is
 /// subject to the same licensing terms and conditions.
@@ -16,7 +16,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.7.
-/// Copyright 1991-2014 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2016 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -39,12 +39,15 @@
 ///
 /// @endparblock
 ///
-//*******************************************************************************
+//******************************************************************************
 
 #ifndef POVRAY_BASE_IMAGE_H
 #define POVRAY_BASE_IMAGE_H
 
+// Module config header file must be the first file included within POV-Ray unit header files
 #include "base/configbase.h"
+
+// POV-Ray base header files
 #include "base/fileinputoutput.h"
 #include "base/pov_err.h"
 #include "base/image/colourspace.h"
@@ -177,11 +180,11 @@ class Image
             SimpleGammaCurvePtr workingGamma;   // the working colour space gamma
             bool gammaOverride;                 // whether to apply defaultGamma even if the file indicates a different gamma
             bool gammacorrect;                  // whether to do any gamma correction at all; if false, raw encoded values are used
-            bool premultiplyOverride;           // whether to override file-format default for alpha premultiplication
-            bool premultiply;                   // whether to expect premultiplied ("associated") alpha or not ("straight alpha")
+            bool premultipliedOverride;         // whether to override file-format default for alpha premultiplication
+            bool premultiplied;                 // whether to expect premultiplied ("associated") alpha or not ("straight alpha")
             mutable vector<string> warnings;
 
-            ReadOptions() : itype(Undefined), gammaOverride(false), gammacorrect(false), premultiplyOverride(false), premultiply(false) { }
+            ReadOptions() : itype(Undefined), gammaOverride(false), gammacorrect(false), premultipliedOverride(false), premultiplied(false) { }
         };
 
         struct WriteOptions
