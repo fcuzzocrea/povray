@@ -173,7 +173,9 @@ struct ExperimentalFlags
 {
     bool    backsideIllumination    : 1;
     bool    functionHf              : 1;
+    bool    lommelSeeliger          : 1;
     bool    meshCamera              : 1;
+    bool    orenNayar               : 1;
     bool    slopeAltitude           : 1;
     bool    spline                  : 1;
     bool    subsurface              : 1;
@@ -185,7 +187,9 @@ struct ExperimentalFlags
     ExperimentalFlags() :
         backsideIllumination(false),
         functionHf(false),
+        lommelSeeliger(false),
         meshCamera(false),
+        orenNayar(false),
         slopeAltitude(false),
         spline(false),
         subsurface(false),

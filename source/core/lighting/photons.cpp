@@ -468,7 +468,7 @@ void PhotonTrace::ComputeLightedTexture(LightColour&, ColourChannel&, const Ligh
         diffuseWeight = ResCol.WeightAbsGreyscale();
         // use top-layer finish only
         if(Texture->Finish)
-            diffuseWeight*=Texture->Finish->Diffuse * Texture->Finish->BrillianceAdjust;
+            diffuseWeight*=Texture->Finish->Diffuse * Texture->Finish->DiffuseAlbedoAdjust;
         refractionWeight = Trans;
         // reflection only for top layer!!!!!!
         // TODO is "rend()" the top layer or the bottom layer???

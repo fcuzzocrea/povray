@@ -2375,6 +2375,17 @@ void Parser::Parse_Finish (FINISH **Finish_Ptr)
                 mExperimentalFlags.backsideIllumination = true;
         END_CASE
 
+        CASE (LOMMEL_SEELIGER_TOKEN)
+            New->LommelSeeligerWeight = Parse_Float ();
+        END_CASE
+
+        CASE (OREN_NAYAR_TOKEN)
+            New->SetOrenNayarSigma(Parse_Float ());
+            mExperimentalFlags.orenNayar = true;
+            PossibleError("Parameterization of the Oren-Nayar diffuse model has not been finalized yet."
+                          " Expect future versions of " BRANCH_NAME " to render this scene differently without warning.");
+        END_CASE
+
         CASE (REFLECTION_TOKEN)
         {
             bool found_second_color = false;
@@ -2614,6 +2625,22 @@ void Parser::Parse_Finish (FINISH **Finish_Ptr)
     END_EXPECT    /* End of finish_mods */
 #endif
 
+    if ((New->OrenNayarA != 1.0) || (New->OrenNayarB != 0.0))
+    {
+        if (New->Fresnel)
+            PossibleError("Finish-level 'fresnel' keyword found in combination with the Oren-Nayar diffuse model."
+                          " The interaction of these features has not been finalized yet, and is known to be bogus."
+                          " Expect future versions of POV-Ray to render this scene differently without warning.");
+    }
+
+    if (New->LommelSeeligerWeight != 0.0)
+    {
+        if (New->Fresnel)
+            PossibleError("Finish-level 'fresnel' keyword found in combination with the Lommel-Seeliger diffuse model."
+                          " The interaction of these features has not been finalized yet, and is known to be bogus."
+                          " Expect future versions of POV-Ray to render this scene differently without warning.");
+    }
+
     if ((sceneData->EffectiveLanguageVersion() >= 370) && ambientSet)
     {
         // As of version 3.7, use of "ambient" to model glowing materials is deprecated, and "emission" should be used
@@ -2639,15 +2666,25 @@ void Parser::Parse_Finish (FINISH **Finish_Ptr)
     // adjust diffuse, phong and/or specular intensity parameters
     // so that a user-specified value of 1.0 corresponds to a
     // backscattering of 100% of the incoming light
+    double EffectiveBihemisphericalReflectance = 2.0 / (New->Brilliance + 1.0);
+    if (New->OrenNayarA != 1.0)
+        EffectiveBihemisphericalReflectance *= New->OrenNayarA;
+    if (New->OrenNayarB != 0.0)
+        EffectiveBihemisphericalReflectance += New->OrenNayarB * (2.0/3.0 - (64.0/45.0)*(1.0/M_PI));
+    if (New->LommelSeeligerWeight != 0.0)
+    {
+        EffectiveBihemisphericalReflectance *= (1.0 - New->LommelSeeligerWeight);
+        EffectiveBihemisphericalReflectance += New->LommelSeeligerWeight * ((8.0 * (1.0-log(2.0))) / 3.0);
+    }
     if (diffuseAdjust)
     {
-        New->BrillianceAdjust    = (New->Brilliance + 1.0) / 2.0;
-        New->BrillianceAdjustRad = 1.0;
+        New->DiffuseAlbedoAdjust    = 1.0 / EffectiveBihemisphericalReflectance;
+        New->DiffuseAlbedoAdjustRad = 1.0;
     }
     else
     {
-        New->BrillianceAdjust    = 1.0;
-        New->BrillianceAdjustRad = 2.0 / (New->Brilliance + 1.0);
+        New->DiffuseAlbedoAdjust    = 1.0;
+        New->DiffuseAlbedoAdjustRad = EffectiveBihemisphericalReflectance;
     }
     if (phongAdjust)
         New->Phong *= (New->Phong_Size + 1.0) / 2.0;

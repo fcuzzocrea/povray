@@ -302,6 +302,8 @@ void Parser::Run()
         strcat(str, str [0] ? ", function '.hf'" : "function '.hf'");
     if(mExperimentalFlags.meshCamera)
         strcat(str, str [0] ? ", mesh camera" : "mesh camera");
+    if(mExperimentalFlags.orenNayar)
+        strcat(str, str [0] ? ", Oren-Nayar diffuse model" : "Oren-Nayar diffuse model");
     if(mExperimentalFlags.slopeAltitude)
         strcat(str, str [0] ? ", slope pattern altitude" : "slope pattern altitude");
     if(mExperimentalFlags.spline)

@@ -4,11 +4,12 @@ located in the same directory as this file is.
 ----------------------------------------------------------------------------
 
 --------------------------------------------------
-Changes between POV-Ray 3.7.0 and UberPOV 1.37.0.0
+Changes between POV-Ray 3.7.1 and UberPOV 1.37.1.0
 --------------------------------------------------
 
-  - UberPOV 1.37.0.0 is based on from POV-Ray 3.7.0, with the following notable
-    changes (in addition to the obvious change of the program name and version).
+  - UberPOV 1.37.1.0 is based on POV-Ray 3.7.1 development versions, with the
+    following notable changes (in addition to the obvious change of the program
+    name and version).
 
   - UberPOV adds a few sample scenes for its own features.
 
@@ -221,6 +222,48 @@ Reflection Blur:
     This syntax extension can be tested for using the #patch directive or
     patch() function with the patch name "upov-reflection-roughness"; the
     current implementation is version 0.9.
+
+Advanced Diffuse Models:
+------------------------
+
+  - UberPOV supports the so-called Lunar-Lambert model for diffuse reflections,
+    which is a weighted average of the standard Lambertian model and the
+    so-called Lommel-Seeliger model. To enable this model, specify the
+    following parameter in the finish block:
+
+        lommel_seeliger NUMBER
+
+    The parameter specifies the relative weight of the Lommel-Seeliger model,
+    ranging from 0 (Lambertian only) to 1 (Lommel-Seeliger only).
+
+    This syntax extension can be tested for using the #patch directive or
+    patch() function with the patch name "upov-lommel_seeliger"; the current
+    implementation is version 0.9.
+
+  - UberPOV supports the so-called Oren-Nayar "qualitative model" for diffuse
+    reflections, which is a generalization of the standard Lambertian model. To
+    enable this model, specify the following parameter in the finish block:
+
+        oren_nayar NUMBER
+
+    NOTE: In the current implementation, this parameter specifies the "sigma"
+    parameter in the Oren-Nayar equations. This may be subject to change, so
+    that the parameter value may better match the "roughness" parameters for
+    specular highlights and blurred reflections.
+
+    This syntax extension can be tested for using the #patch directive or
+    patch() function with the patch name "upov-oren_nayar"; the current
+    implementation is version 0.1.
+
+  - Known caveats:
+
+      - The advanced diffuse models currently do not properly support the
+        fresnel-based attenuation of the diffuse reflection, as enabled by the
+        "fresnel" keyword placed directly inside the finish block.
+
+      - The advanced diffuse models only support illumination from classic
+        light sources; for computations involving radiosity, an approximation
+        based on the standard Lambertian model is used.
 
 Unbiased Diffuse Illumination:
 ------------------------------
