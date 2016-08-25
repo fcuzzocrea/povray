@@ -93,6 +93,6 @@ deploy:
   description: $(pov_build_message)
 
   auth_token:
-    secure: TODO
+    secure: WkcFPXyr/SJ9TXixTQyivhfoR9FzlryIbc4deHeQ0eA6YRXL0wQopMYJ6XL1/FJK
   draft: true
   prerelease: true
