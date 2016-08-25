@@ -49,9 +49,9 @@
 #define BRANCH_FULL_NAME        "UberPOV Raytracer"
 #define BRANCH_MAINTAINER       "Christoph Lipka"
 #define BRANCH_CONTACT          "http://www.lipka-koeln.de"
-#define BRANCH_VERSION          "1.37.1.0"
+#define BRANCH_VERSION          "1.37.1.1"
 #define BRANCH_COPYRIGHT        "Copyright 2013-2016 Christoph Lipka."
-#define BRANCH_PRERELEASE       "alpha.8756742"
+#define BRANCH_PRERELEASE       "alpha.8756754"
 
 /// Primary developers of this branch, in alphabetical order.
 /// Comma-separated list of strings, e.g.
