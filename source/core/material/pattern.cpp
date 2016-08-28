@@ -6179,7 +6179,8 @@ DBL DensityFilePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *
                     Ex = max(0.0,Ex-(1.0/(DBL)Data->Sx/2.0)); // Adjustment to voxel center
                     Ey = max(0.0,Ey-(1.0/(DBL)Data->Sy/2.0));
                     Ez = max(0.0,Ez-(1.0/(DBL)Data->Sz/2.0));
-
+                    // FALLTHROUGH
+                case kDensityFileInterpolation_Trilinear_Shftd: // (11 vs 1) As means to provide backward shift left-forward-down compatibility
                     xx = Ex * (DBL)(Data->Sx);
                     yy = Ey * (DBL)(Data->Sy);
                     zz = Ez * (DBL)(Data->Sz);
@@ -6244,7 +6245,8 @@ DBL DensityFilePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *
                     Ex = max(0.0,Ex-(1.0/(DBL)Data->Sx/2.0)); // Adjustment to voxel center
                     Ey = max(0.0,Ey-(1.0/(DBL)Data->Sy/2.0));
                     Ez = max(0.0,Ez-(1.0/(DBL)Data->Sz/2.0));
-
+                    // FALLTHROUGH
+                case kDensityFileInterpolation_Tricubic_Shftd: // (12 vs 2) As means to provide backward shift left-forward-down compatibility
                     xx = Ex * (DBL)(Data->Sx);
                     yy = Ey * (DBL)(Data->Sy);
                     zz = Ez * (DBL)(Data->Sz);
