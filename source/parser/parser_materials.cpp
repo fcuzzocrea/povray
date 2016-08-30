@@ -1545,8 +1545,8 @@ void Parser::Parse_Pattern (PATTERN_T *New, BlendMapTypeId TPat_Type)
         END_CASE
 
         CASE (IMAGE_MAP_TOKEN)
-            if (TPat_Type != kBlendMapType_Pigment)
-                Only_In("image_map","pigment");
+            if ((TPat_Type != kBlendMapType_Pigment) && (TPat_Type != kBlendMapType_Density))
+                Only_In("image_map","pigment or density");
             New->Type = IMAGE_MAP_PATTERN;
             New->pattern = PatternPtr(new ColourImagePattern());
             Parse_Image_Map (reinterpret_cast<PIGMENT *>(New));
