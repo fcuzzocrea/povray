@@ -650,6 +650,30 @@ PotentialPattern::~PotentialPattern()
         Destroy_Object(pObject);
 }
 
+SoftObjectPattern::SoftObjectPattern() :
+    pObject(NULL),
+    spacing(0.25+EPSILON), // EPSILON prevents virtual grid ray alignment and FltPt noise.
+    strength(1.00)
+{
+    waveType = kWaveType_Raw;
+}
+
+SoftObjectPattern::SoftObjectPattern(const SoftObjectPattern& obj) :
+    ContinuousPattern(obj),
+    pObject(NULL),
+    spacing(obj.spacing),
+    strength(obj.strength)
+{
+    if (obj.pObject)
+        pObject = Copy_Object(obj.pObject);
+}
+
+SoftObjectPattern::~SoftObjectPattern()
+{
+    if (pObject)
+        Destroy_Object(pObject);
+}
+
 
 QuiltedPattern::QuiltedPattern() : Control0(1.0), Control1(1.0) { waveFrequency = 0.0; }
 
@@ -7859,7 +7883,6 @@ DBL NoisePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsect
 }
 
 
-
 /*****************************************************************************
 *
 * FUNCTION
@@ -7868,15 +7891,13 @@ DBL NoisePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsect
 *
 * INPUT
 *
-*   EPoint -- The point in 3d space at which the pattern
-*   is evaluated.
-*   TPat   -- Texture pattern struct
+*   EPoint -- The point in 3d space where the pattern is evaluated.
 *
 * OUTPUT
 *
 * RETURNS
 *
-*   DBL value in the range 0.0 to 1.0
+*   DBL value of 0.0 or 1.0
 *
 * AUTHOR
 *
@@ -7890,7 +7911,7 @@ DBL ObjectPattern::Evaluate(const Vector3d& EPoint, const Intersection *pIsectio
 {
     if (pObject != nullptr)
     {
-        if(Inside_Object(EPoint, pObject, pThread))
+        if(Inside_BBox(EPoint, pObject->BBox) && Inside_Object(EPoint, pObject, pThread))
             return 1.0;
         else
             return 0.0;
@@ -7898,6 +7919,116 @@ DBL ObjectPattern::Evaluate(const Vector3d& EPoint, const Intersection *pIsectio
 
     return 0.0;
 }
+
+/*****************************************************************************
+*
+* FUNCTION
+*
+*   softobject_pattern
+*
+* INPUT
+*
+*   EPoint -- The point in 3d space where the pattern is evaluated.
+*
+* OUTPUT
+*
+* RETURNS
+*
+*   DBL value of 0.0 to 1.0
+*
+* AUTHOR
+*
+* DESCRIPTION
+*
+* CHANGES
+*
+******************************************************************************/
+
+inline DBL SoftObjectPattern::fblob(const DBL v, const DBL s) const
+{
+    return 1.0/exp(v*s);
+}
+
+inline void SoftObjectPattern::calcAllDiffsSqrd(DBL *aryd, const DBL axisVal, const DBL spacing) const
+{  //---- Do all normalized dist calculations for axis at this point for use later.
+   size_t n;
+   DBL nrmVal = 3.5+(fmod(axisVal,spacing)*(1/spacing)-0.5);
+   DBL tmpVal;
+   for(n = 0; n<8; n++)
+   {
+       tmpVal=(DBL)(n)-nrmVal;
+       aryd[n]=tmpVal*tmpVal;
+   }
+}
+
+DBL SoftObjectPattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const
+{
+    //--- strength and spacing defaulted but expect usually set in SDL.
+
+    DBL runningval   = 0.0;
+    size_t startidx  = 0;
+    size_t stopidx   = 7;
+    DBL strengthBias = 0.6187184335382291;
+    DBL val          = strengthBias/strength;
+    DBL rxd[8],ryd[8],rzd[8];
+
+    if(pObject != NULL)
+    {
+        Vector3d VirtBBoxLL;
+        Vector3d VirtBBoxSize;
+
+        VirtBBoxLL.x() = floor((EPoint.x()/spacing-3.0))*spacing; // LL - Lower Left
+        VirtBBoxLL.y() = floor((EPoint.y()/spacing-3.0))*spacing;
+        VirtBBoxLL.z() = floor((EPoint.z()/spacing-3.0))*spacing;
+
+        // The following BBOX pre-filter mostly helps - 5% faster in testing where shape <2/3 volume/pattern surface.
+        // MIN_ISECT_DEPTH used, DBL cast & slows filter due SNGL bbox values.
+        VirtBBoxSize.x() =
+        VirtBBoxSize.y() =
+        VirtBBoxSize.z() = 8.0*spacing;
+
+        if((VirtBBoxLL.x()-MIN_ISECT_DEPTH > (DBL)pObject->BBox.lowerLeft.x()+(DBL)pObject->BBox.size.x()) ||
+           (VirtBBoxLL.y()-MIN_ISECT_DEPTH > (DBL)pObject->BBox.lowerLeft.y()+(DBL)pObject->BBox.size.y()) ||
+           (VirtBBoxLL.z()-MIN_ISECT_DEPTH > (DBL)pObject->BBox.lowerLeft.z()+(DBL)pObject->BBox.size.z())
+          )
+            return(0.0);
+        if((VirtBBoxLL.x()+VirtBBoxSize.x()+MIN_ISECT_DEPTH < (DBL)pObject->BBox.lowerLeft.x()) ||
+           (VirtBBoxLL.y()+VirtBBoxSize.y()+MIN_ISECT_DEPTH < (DBL)pObject->BBox.lowerLeft.y()) ||
+           (VirtBBoxLL.z()+VirtBBoxSize.z()+MIN_ISECT_DEPTH < (DBL)pObject->BBox.lowerLeft.z())
+          )
+            return(0.0);
+        // End BBOX pre-filter
+
+        size_t i, j, k;
+        Vector3d thisVoxel;
+
+        calcAllDiffsSqrd(rxd,EPoint.x()-VirtBBoxLL.x(),spacing);
+        calcAllDiffsSqrd(ryd,EPoint.y()-VirtBBoxLL.y(),spacing);
+        calcAllDiffsSqrd(rzd,EPoint.z()-VirtBBoxLL.z(),spacing);
+
+        for(i = startidx; i <= stopidx; i++)
+        {
+            thisVoxel.z() = VirtBBoxLL.z() + i * spacing;
+            for(j = startidx; j <= stopidx; j++)
+            {
+                thisVoxel.y() = VirtBBoxLL.y() + j * spacing;
+                for(k = startidx; k <= stopidx; k++)
+                {
+                    thisVoxel.x() = VirtBBoxLL.x() + k * spacing;
+                    if(Inside_BBox(thisVoxel, pObject->BBox) && Inside_Object(thisVoxel, pObject, pThread))
+                    {
+                        runningval+=fblob(rzd[i]+ryd[j]+rxd[k],val);
+                        if(runningval > 1.0)
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    return min(1.0,runningval);
+}
+
 
 /*****************************************************************************
 *

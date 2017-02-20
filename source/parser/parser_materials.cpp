@@ -1048,6 +1048,37 @@ PatternPtr Parser::ParsePotentialPattern()
     return pattern;
 }
 
+PatternPtr Parser::ParseSoftObjectPattern()
+{
+    shared_ptr<SoftObjectPattern> pattern(new SoftObjectPattern());
+
+    Parse_Begin();
+
+    vector<ObjectPtr> tempObjects;
+    Parse_Bound_Clip(tempObjects, false);
+
+    if(tempObjects.size() != 1)
+        Error ("object or object identifier expected.");
+    pattern->pObject = tempObjects[0];
+
+    Parse_End();
+
+    EXPECT
+        CASE (SPACING_TOKEN)
+            pattern->spacing = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON; // EPSILON prevents grid/ray FP noise.
+        END_CASE
+        CASE (STRENGTH_TOKEN)
+            pattern->strength = max(Parse_Float(),EPSILON);
+        END_CASE
+        OTHERWISE
+            UNGET
+            EXIT
+        END_CASE
+    END_EXPECT
+
+    return pattern;
+}
+
 //******************************************************************************
 
 PatternPtr Parser::ParseSlopePattern()
@@ -1674,6 +1705,11 @@ void Parser::Parse_Pattern (PATTERN_T *New, BlendMapTypeId TPat_Type)
             New->pattern = ParsePotentialPattern();
         END_CASE
 
+        CASE (SOFT_OBJECT_TOKEN)
+            New->Type = GENERIC_PATTERN;
+            New->pattern = ParseSoftObjectPattern();
+        END_CASE
+
         OTHERWISE
             UNGET
         END_CASE
@@ -1689,9 +1725,21 @@ void Parser::Parse_Pattern (PATTERN_T *New, BlendMapTypeId TPat_Type)
         CASE (ACCURACY_TOKEN)
             if(TPat_Type != kBlendMapType_Normal)
             {
-                Error("accuracy can only be used with normal patterns.");
+                Only_In("accuracy", "isosurface, normal pattern or parametric");
             }
             (reinterpret_cast<TNORMAL *>(New))->Delta = Parse_Float();
+        END_CASE
+
+        CASE (SPACING_TOKEN)
+            Only_In("spacing", "photons or soft_object pattern");
+        END_CASE
+
+        CASE (STRENGTH_TOKEN)
+            Only_In("strength", "blob, soft_bject pattern or warp");
+        END_CASE
+
+        CASE (THRESHOLD_TOKEN)
+            Only_In("threshold", "blob, isosurface or potential pattern");
         END_CASE
 
         CASE (SOLID_TOKEN)
@@ -5094,6 +5142,11 @@ void Parser::Parse_PatternFunction(TPATTERN *New)
         CASE (POTENTIAL_TOKEN)
             New->Type = GENERIC_PATTERN;
             New->pattern = ParsePotentialPattern();
+        END_CASE
+
+        CASE (SOFT_OBJECT_TOKEN)
+            New->Type = GENERIC_PATTERN;
+            New->pattern = ParseSoftObjectPattern();
         END_CASE
 
         OTHERWISE

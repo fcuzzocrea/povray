@@ -831,6 +831,7 @@ class Parser
         PatternPtr ParseMandelPattern();
         PatternPtr ParsePotentialPattern();
         PatternPtr ParseSlopePattern();
+        PatternPtr ParseSoftObjectPattern();
         template<typename PATTERN_T> PatternPtr ParseSpiralPattern();
         void VerifyPavementPattern(shared_ptr<PavementPattern> pattern);
         void VerifyTilingPattern(shared_ptr<TilingPattern> pattern);

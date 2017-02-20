@@ -706,6 +706,26 @@ struct RipplesPattern : public ContinuousPattern
     virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
 };
 
+/// Implements the `softobject` pattern.
+///
+/// @todo   The additional member variables should possibly be encapsulated.
+///
+struct SoftObjectPattern : public ContinuousPattern
+{
+    ObjectPtr pObject;
+    DBL       spacing;
+    DBL       strength;
+
+    SoftObjectPattern();
+    SoftObjectPattern(const SoftObjectPattern& obj);
+    virtual ~SoftObjectPattern();
+    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    inline DBL fblob(const DBL v, const DBL s) const;
+    inline void calcAllDiffsSqrd(DBL *aryd, const DBL axisVal, const DBL spacing) const;
+
+};
+
 /// Implements the `slope` pattern.
 ///
 /// @todo   The additional member variables should be encapsulated, and computed by the class rather than the parser.

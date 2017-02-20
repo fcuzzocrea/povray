@@ -490,6 +490,7 @@ const RESERVED_WORD Reserved_Words[] = {
     { SLOPE_MAP_TOKEN,              "slope_map" },
     { SMOOTH_TOKEN,                 "smooth" },
     { SMOOTH_TRIANGLE_TOKEN,        "smooth_triangle" },
+    { SOFT_OBJECT_TOKEN,            "soft_object" },
     { SOLID_TOKEN,                  "solid" },
     { SOR_TOKEN,                    "sor" },
     { SPACING_TOKEN,                "spacing" },
