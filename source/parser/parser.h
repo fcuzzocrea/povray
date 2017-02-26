@@ -825,6 +825,7 @@ class Parser
         void Make_Pattern_Image(ImageData *image, FUNCTION_PTR fn, int token);
 
         PatternPtr ParseDensityFilePattern();
+        PatternPtr ParseHardObjectPattern();
         PatternPtr ParseImagePattern();
         PatternPtr ParseJuliaPattern();
         PatternPtr ParseMagnetPattern();

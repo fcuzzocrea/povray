@@ -650,10 +650,36 @@ PotentialPattern::~PotentialPattern()
         Destroy_Object(pObject);
 }
 
+HardObjectPattern::HardObjectPattern() :
+    pObject(NULL),
+    radius(1.0),
+    recursion_limit(4),
+    samples(22)
+{
+    waveType = kWaveType_Raw;
+}
+
+HardObjectPattern::HardObjectPattern(const HardObjectPattern& obj) :
+    ContinuousPattern(obj),
+    pObject(NULL),
+    radius(obj.radius),
+    recursion_limit(obj.recursion_limit),
+    samples(obj.samples)
+{
+    if (obj.pObject)
+        pObject = Copy_Object(obj.pObject);
+}
+
+HardObjectPattern::~HardObjectPattern()
+{
+    if (pObject)
+        Destroy_Object(pObject);
+}
+
 SoftObjectPattern::SoftObjectPattern() :
     pObject(NULL),
     spacing(0.25+EPSILON), // EPSILON prevents virtual grid ray alignment and FltPt noise.
-    strength(1.00)
+    strength(1.0)
 {
     waveType = kWaveType_Raw;
 }
@@ -7924,7 +7950,307 @@ DBL ObjectPattern::Evaluate(const Vector3d& EPoint, const Intersection *pIsectio
 *
 * FUNCTION
 *
-*   softobject_pattern
+*   hard_object_pattern
+*
+* INPUT
+*
+*   EPoint -- The point in 3d space where the pattern is evaluated.
+*
+* OUTPUT
+*
+* RETURNS
+*
+*   DBL value of 0.0 to 1.0
+*
+* AUTHOR
+*
+* DESCRIPTION
+*
+* CHANGES
+*
+******************************************************************************/
+
+inline bool HardObjectPattern::btest(const Vector3d& EPoint, const Vector3d& MoveBy, TraceThreadData *pThread) const
+{
+    return Inside_Object(EPoint+MoveBy, pObject, pThread);
+
+ // if(Inside_Object(EPoint+MoveBy, pObject, pThread))
+ // {
+ //     return true;
+ //   //// Is this second opposite side test useful... (Moves to opposite side of sampling sphere about origin)
+ //   //// Especially if we carefully order the spherical samples...
+ //   //if(Inside_Object(EPoint-MoveBy, pObject, pThread))
+ //   //    return true;
+ //   //else
+ //   //    return false;
+ // }
+ // else
+ //    return false;
+}
+
+bool HardObjectPattern::proximity(const Vector3d& EPoint, const DBL& testRadius, const size_t& samples, TraceThreadData *pThread) const
+{
+    size_t n;
+
+    static const Vector3d SampleVect[201] = {
+        Vector3d(0,0,0),
+        Vector3d(0.58923764,-0.57762872,0.56492837),
+        Vector3d(-0.61345913,0.57396438,-0.54243229),
+        Vector3d(0.56923878,-0.16297363,-0.80585781),
+        Vector3d(0.3989032,0.82558343,0.39910931),
+        Vector3d(-0.79821491,-0.43053811,0.42129549),
+        Vector3d(-0.39517195,-0.70425726,-0.5897973),
+        Vector3d(-0.10832434,0.14970383,0.98277902),
+        Vector3d(0.30203965,0.75705824,-0.57934003),
+        Vector3d(-0.80992861,0.47643119,0.34209497),
+        Vector3d(0.98223777,0.10780677,0.15357953),
+        Vector3d(-0.01479063,-0.99123211,0.13130171),
+        Vector3d(-0.91386046,-0.15825482,-0.37391774),
+        Vector3d(-0.13731183,0.02630645,-0.99017848),
+        Vector3d(0.36136873,-0.80673641,-0.46753502),
+        Vector3d(-0.14415143,0.98955122,0.00295631),
+        Vector3d(0.85865297,-0.50206954,-0.1031565),
+        Vector3d(-0.25963818,-0.4876534,0.83353595),
+        Vector3d(0.6280064,0.29244128,0.72116993),
+        Vector3d(0.83367758,0.31800255,-0.45150424),
+        Vector3d(-0.27586878,0.67792262,0.68140835),
+        Vector3d(-0.67879788,0.06606778,0.73134703),
+        Vector3d(-0.82379984,-0.56183644,-0.0754562),
+        Vector3d(-0.05513649,-0.46431692,-0.88395122),
+        Vector3d(0.39380452,-0.24238917,0.88665974),
+        Vector3d(-0.96149487,0.25782022,-0.09516483),
+        Vector3d(0.49157599,0.86638077,-0.08796249),
+        Vector3d(-0.64316848,-0.01673471,-0.76554181),
+        Vector3d(0.4939857,0.33807731,-0.80105047),
+        Vector3d(-0.00293137,0.47385659,-0.88059715),
+        Vector3d(0.81386115,-0.12170101,0.56817154),
+        Vector3d(-0.50236094,-0.8627242,0.05779658),
+        Vector3d(0.78945398,0.5054821,0.34821007),
+        Vector3d(-0.70655569,0.69876201,-0.11185133),
+        Vector3d(-0.062672,-0.93063928,-0.36053121),
+        Vector3d(0.59978203,-0.79187774,0.11485279),
+        Vector3d(-0.29133443,-0.80268667,0.52040212),
+        Vector3d(0.2167782,-0.81549962,0.5366261),
+        Vector3d(0.22855488,0.41720654,0.87960296),
+        Vector3d(0.9418007,-0.12255204,-0.31303744),
+        Vector3d(-0.94763518,-0.03026866,0.31791725),
+        Vector3d(-0.45019734,0.8368935,0.31133845),
+        Vector3d(-0.09884708,0.90092984,-0.4225573),
+        Vector3d(0.01343234,0.91365421,0.40627031),
+        Vector3d(0.47488132,-0.52080343,-0.70940223),
+        Vector3d(-0.39953468,0.26580624,-0.87733636),
+        Vector3d(0.7716398,0.62912837,-0.09364568),
+        Vector3d(0.37619271,-0.91529381,-0.14393153),
+        Vector3d(-0.61306892,-0.71443902,0.33722898),
+        Vector3d(-0.64405632,-0.33758349,-0.6864611),
+        Vector3d(0.80268521,-0.4639622,0.37474728),
+        Vector3d(-0.00099259,0.60370916,0.79720403),
+        Vector3d(-0.15183583,0.68200009,-0.71541719),
+        Vector3d(-0.5325564,-0.41709596,0.73648805),
+        Vector3d(0.15568526,-0.26505688,-0.95158129),
+        Vector3d(0.24808059,-0.49322955,0.83377493),
+        Vector3d(0.73714279,-0.58920438,-0.33084545),
+        Vector3d(0.09934845,0.23872527,-0.96599179),
+        Vector3d(-0.14175211,-0.792451,-0.59323499),
+        Vector3d(0.69091819,-0.43826334,-0.57494113),
+        Vector3d(-0.74967715,-0.57499385,-0.32766789),
+        Vector3d(-0.74153852,0.28537428,0.60719202),
+        Vector3d(-0.78109407,0.61251582,0.12131124),
+        Vector3d(0.49069523,-0.0022875,0.87132827),
+        Vector3d(0.95597089,0.29225655,-0.0265661),
+        Vector3d(0.2747166,-0.68221525,-0.67757889),
+        Vector3d(0.35552794,-0.08722899,-0.93058637),
+        Vector3d(-0.19269692,0.94791862,0.25361032),
+        Vector3d(-0.48842768,-0.20804985,-0.84743948),
+        Vector3d(0.15865534,0.90277996,-0.39977097),
+        Vector3d(0.00383031,-0.08251122,0.99658277),
+        Vector3d(0.90772747,-0.22931164,0.35135028),
+        Vector3d(-0.25167216,-0.06422957,0.96567887),
+        Vector3d(0.70701301,0.69152144,0.14809017),
+        Vector3d(-0.27375948,0.93772457,-0.21384196),
+        Vector3d(0.78330142,-0.61030955,0.11815727),
+        Vector3d(0.14563113,0.19093803,0.97073902),
+        Vector3d(-0.91259651,0.39015069,0.1222704),
+        Vector3d(0.99577452,-0.00258063,-0.09179573),
+        Vector3d(-0.99130979,-0.1072024,0.07624006),
+        Vector3d(-0.16102774,-0.92883791,0.33366182),
+        Vector3d(0.87635495,0.06553259,-0.47718706),
+        Vector3d(0.45689664,0.66460272,0.59122643),
+        Vector3d(-0.79434641,-0.37149256,-0.48063193),
+        Vector3d(-0.04899199,0.78333776,0.6196626),
+        Vector3d(-0.59898233,0.79368595,0.10622043),
+        Vector3d(0.73140552,0.54907876,-0.40442363),
+        Vector3d(-0.2079683,-0.96630705,-0.1516571),
+        Vector3d(0.65905709,-0.67337712,0.33497316),
+        Vector3d(0.6184128,0.73778842,-0.27061754),
+        Vector3d(-0.33329908,0.24949,0.909212),
+        Vector3d(0.65495096,0.49748308,0.56881441),
+        Vector3d(0.82017542,-0.22153441,-0.52747965),
+        Vector3d(-0.15459172,-0.68683813,0.71017941),
+        Vector3d(-0.56867501,0.7424858,-0.35401068),
+        Vector3d(-0.76288477,-0.24716493,0.59742475),
+        Vector3d(0.70030984,-0.70603192,-0.1052856),
+        Vector3d(0.40801161,0.56480925,-0.71729843),
+        Vector3d(0.15739556,-0.93505543,0.31764444),
+        Vector3d(0.38556932,-0.33363374,-0.86024695),
+        Vector3d(-0.24443255,0.4806224,0.84217269),
+        Vector3d(0.24732079,0.62932191,0.73674036),
+        Vector3d(-0.59860624,-0.17207462,0.78234321),
+        Vector3d(-0.40737759,-0.86277074,0.29944974),
+        Vector3d(-0.65282058,0.67895126,0.33593225),
+        Vector3d(-0.47960039,0.70122262,0.52751331),
+        Vector3d(0.25511269,-0.04189182,0.96600341),
+        Vector3d(0.7193354,-0.35843165,0.59504902),
+        Vector3d(-0.2681366,-0.95831213,0.0986946),
+        Vector3d(0.36446485,-0.64947426,0.66734441),
+        Vector3d(-0.47053044,0.5150866,0.71644044),
+        Vector3d(0.87172898,-0.36878055,-0.32262901),
+        Vector3d(-0.3851038,0.01414838,-0.92276481),
+        Vector3d(0.23126744,-0.97105615,0.0597104),
+        Vector3d(-0.47289986,0.03499644,0.88042091),
+        Vector3d(0.53411622,0.67651021,-0.50700473),
+        Vector3d(0.94736724,0.18701008,-0.259851),
+        Vector3d(0.71558243,0.22818578,-0.66020681),
+        Vector3d(-0.61897815,0.23933416,-0.74805428),
+        Vector3d(-0.86293655,0.49382236,-0.1071447),
+        Vector3d(-0.62304888,-0.55672104,-0.54942859),
+        Vector3d(0.6264629,0.46793044,-0.62336613),
+        Vector3d(0.10277238,-0.68271617,0.72341998),
+        Vector3d(-0.13585092,-0.29394877,0.94611767),
+        Vector3d(-0.223742,-0.61376282,-0.75712266),
+        Vector3d(-0.90261127,0.2384306,0.35839049),
+        Vector3d(-0.8811047,0.34723265,-0.32106697),
+        Vector3d(-0.61922279,-0.56524645,0.54503173),
+        Vector3d(-0.9189686,0.09742421,-0.38210632),
+        Vector3d(0.19424576,-0.50322535,-0.84204088),
+        Vector3d(-0.38332929,-0.26779949,0.88393557),
+        Vector3d(-0.93767613,-0.3474691,0.00535773),
+        Vector3d(0.39623756,-0.88699415,0.2371438),
+        Vector3d(-0.70169294,-0.70578292,0.09745503),
+        Vector3d(-0.7548841,0.36092492,-0.54761593),
+        Vector3d(-0.0388933,-0.84000982,0.5411754),
+        Vector3d(0.98192869,-0.14581308,0.12064243),
+        Vector3d(-0.7885894,-0.14377216,-0.59787651),
+        Vector3d(-0.84269836,0.0584386,0.53520501),
+        Vector3d(0.73945787,-0.02631953,-0.67268815),
+        Vector3d(0.4187166,0.24303802,0.87499082),
+        Vector3d(0.90299292,0.27395293,0.33098878),
+        Vector3d(-0.2567664,0.83972802,0.47846407),
+        Vector3d(-0.39225231,0.67095909,-0.62924719),
+        Vector3d(0.8043052,0.20684453,0.5570534),
+        Vector3d(-0.45380858,-0.50277369,-0.73571488),
+        Vector3d(0.19785346,0.8074124,0.55582302),
+        Vector3d(0.04409489,-0.99198938,-0.11837532),
+        Vector3d(0.10613832,-0.83158999,-0.54515388),
+        Vector3d(-0.44492779,-0.87498785,-0.19088093),
+        Vector3d(0.3417048,0.16928221,-0.9244357),
+        Vector3d(0.1629334,0.62739628,-0.76146347),
+        Vector3d(0.87245957,0.43359165,-0.22541645),
+        Vector3d(-0.98842519,0.0085445,-0.15146828),
+        Vector3d(-0.50269854,0.85403214,-0.13387783),
+        Vector3d(-0.65905788,0.51976741,0.54358492),
+        Vector3d(0.1167407,-0.01463857,-0.99305454),
+        Vector3d(-0.92577961,-0.2773184,0.25695643),
+        Vector3d(-0.25912672,0.48397894,-0.83583355),
+        Vector3d(0.22029635,0.94081644,0.25755378),
+        Vector3d(0.56586096,0.09369806,-0.81915936),
+        Vector3d(-0.54874667,-0.74035082,-0.38827536),
+        Vector3d(0.45366414,-0.76631182,0.45492312),
+        Vector3d(0.90796485,-0.39011955,0.15299206),
+        Vector3d(0.0488449,0.79475507,-0.60496162),
+        Vector3d(-0.55418906,0.28317943,0.78274127),
+        Vector3d(-0.37958527,0.92165195,0.0804531),
+        Vector3d(0.19078892,-0.92837314,-0.31894029),
+        Vector3d(0.26142571,0.41716322,-0.87042027),
+        Vector3d(-0.75398845,0.56842401,-0.32923482),
+        Vector3d(0.92168427,0.02466408,0.38715602),
+        Vector3d(-0.00525959,-0.50047466,0.86573521),
+        Vector3d(-0.84194604,-0.50791493,0.18206946),
+        Vector3d(-0.09598516,-0.22468222,-0.96969312),
+        Vector3d(0.10959649,0.99353036,0.02976641),
+        Vector3d(-0.98074525,0.14272548,0.13329737),
+        Vector3d(0.0074903,0.97891754,-0.20411845),
+        Vector3d(-0.02195635,0.38299314,0.92349021),
+        Vector3d(-0.89277548,-0.37784875,-0.24532074),
+        Vector3d(0.44967499,0.47096224,0.75893805),
+        Vector3d(-0.40223308,-0.6263633,0.66774064),
+        Vector3d(0.69149909,0.04415005,0.7210269),
+        Vector3d(0.54449721,-0.78691281,-0.29032916),
+        Vector3d(0.95821345,-0.26675526,-0.10328904),
+        Vector3d(0.14916399,-0.28680942,0.94630358),
+        Vector3d(0.02654576,-0.67070351,-0.74125038),
+        Vector3d(-0.15265807,0.27879118,-0.94814081),
+        Vector3d(0.26444685,0.94952084,-0.16875435),
+        Vector3d(0.40288396,0.84201476,-0.35874177),
+        Vector3d(-0.49365853,0.46123198,-0.7372695),
+        Vector3d(-0.78964346,0.11404506,-0.60287389),
+        Vector3d(0.61329673,-0.19886284,0.76440872),
+        Vector3d(-0.30616976,-0.85988406,-0.40848437),
+        Vector3d(0.48922103,-0.43818736,0.75409192),
+        Vector3d(-0.29185015,-0.36956189,-0.88218337),
+        Vector3d(-0.34400298,0.83201192,-0.43522191),
+        Vector3d(0.50547517,0.84659741,0.16663635),
+        Vector3d(-0.65701615,-0.73799604,-0.15392087),
+        Vector3d(0.61431385,0.68601644,0.38987171),
+        Vector3d(0.86496675,0.49072929,0.10496327),
+        Vector3d(0.5650302,-0.65137479,-0.50641066)
+    };
+
+    for(n = 0; n<=samples; n++)
+        if(!btest(EPoint, SampleVect[n]*testRadius, pThread))
+            return false;
+
+    return true;
+}
+
+DBL HardObjectPattern::bsearch (const Vector3d& EPoint, DBL CurrentValue, DBL CurrentValueDelta, size_t& depth, const size_t& maxdepth, TraceThreadData *pThread) const
+{
+    if ((depth > maxdepth) || (CurrentValueDelta < EPSILON))
+        return CurrentValue;
+    else
+    {
+       depth++;
+
+       if(proximity(EPoint, CurrentValue, samples, pThread))
+           return bsearch(EPoint,CurrentValue+CurrentValueDelta,CurrentValueDelta*0.5,depth,maxdepth,pThread);
+       else
+           return bsearch(EPoint,CurrentValue-CurrentValueDelta,CurrentValueDelta*0.5,depth,maxdepth,pThread);
+    }
+
+    return 0.0;
+}
+
+DBL HardObjectPattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const
+{
+    size_t depth=0;
+
+    if(pObject != NULL)
+    {
+        if(Inside_BBox(EPoint, pObject->BBox) && Inside_Object(EPoint, pObject, pThread))
+        {
+            if(proximity(EPoint, radius, samples, pThread))
+            {
+                return 1.0; // If initial spherical samples inside object at full radius return 1.0.
+            }
+            else
+            {
+                return min(1.0,bsearch(EPoint,radius,radius*0.5,depth,recursion_limit,pThread)/radius);
+            }
+        }
+        else
+        {
+            return 0.0;
+        }
+    }
+
+    return 0.0;
+}
+
+/*****************************************************************************
+*
+* FUNCTION
+*
+*   soft_object_pattern
 *
 * INPUT
 *
@@ -7951,14 +8277,14 @@ inline DBL SoftObjectPattern::fblob(const DBL v, const DBL s) const
 
 inline void SoftObjectPattern::calcAllDiffsSqrd(DBL *aryd, const DBL axisVal, const DBL spacing) const
 {  //---- Do all normalized dist calculations for axis at this point for use later.
-   size_t n;
-   DBL nrmVal = 3.5+(fmod(axisVal,spacing)*(1/spacing)-0.5);
-   DBL tmpVal;
-   for(n = 0; n<8; n++)
-   {
-       tmpVal=(DBL)(n)-nrmVal;
-       aryd[n]=tmpVal*tmpVal;
-   }
+    size_t n;
+    DBL nrmVal = 3.5+(fmod(axisVal,spacing)*(1/spacing)-0.5);
+    DBL tmpVal;
+    for(n = 0; n<8; n++)
+    {
+        tmpVal=(DBL)(n)-nrmVal;
+        aryd[n]=tmpVal*tmpVal;
+    }
 }
 
 DBL SoftObjectPattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const

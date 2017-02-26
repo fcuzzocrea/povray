@@ -404,6 +404,7 @@ enum TokenId : int
     GRANITE_TOKEN,
     GRAY_THRESHOLD_TOKEN,
 
+    HARD_OBJECT_TOKEN,
     HASH_TOKEN,
     HAT_TOKEN,
     HDR_TOKEN,

@@ -258,6 +258,7 @@ const RESERVED_WORD Reserved_Words[] = {
     { GRAY_THRESHOLD_TOKEN,         "gray_threshold" },
     { GREEN_TOKEN,                  "green" },
 
+    { HARD_OBJECT_TOKEN,            "hard_object" },
     { HDR_TOKEN,                    "hdr" },
     { HEIGHT_FIELD_TOKEN,           "height_field" },
     { HEXAGON_TOKEN,                "hexagon" },

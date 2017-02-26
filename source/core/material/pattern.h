@@ -552,6 +552,27 @@ struct GranitePattern : public ContinuousPattern
     virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
 };
 
+/// Implements the `hard_object` pattern.
+///
+/// @todo   The additional member variables should possibly be encapsulated.
+///
+struct HardObjectPattern : public ContinuousPattern
+{
+    ObjectPtr pObject;
+    DBL       radius;
+    size_t    recursion_limit;
+    size_t    samples;
+
+    HardObjectPattern();
+    HardObjectPattern(const HardObjectPattern& obj);
+    virtual ~HardObjectPattern();
+    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    inline bool btest(const Vector3d& EPoint, const Vector3d& MoveBy, TraceThreadData *pThread) const;
+    bool proximity(const Vector3d& EPoint, const DBL& testRadius, const size_t& samples, TraceThreadData *pThread) const;
+    DBL bsearch (const Vector3d& EPoint, DBL CurrentValue, DBL CurrentValueDelta, size_t& depth, const size_t& maxdepth, TraceThreadData *pThread) const;
+};
+
 /// Implements the `hexagon` pattern.
 struct HexagonPattern : public DiscretePattern
 {
@@ -706,7 +727,7 @@ struct RipplesPattern : public ContinuousPattern
     virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
 };
 
-/// Implements the `softobject` pattern.
+/// Implements the `soft_object` pattern.
 ///
 /// @todo   The additional member variables should possibly be encapsulated.
 ///

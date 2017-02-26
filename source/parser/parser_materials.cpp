@@ -847,7 +847,6 @@ void Parser::Parse_Bump_Map (TNORMAL *Tnormal)
 }
 
 
-
 //******************************************************************************
 
 PatternPtr Parser::ParseDensityFilePattern()
@@ -861,6 +860,42 @@ PatternPtr Parser::ParseDensityFilePattern()
     if (dfile == nullptr)
         Error("Cannot read media density file.");
     Read_Density_File(dfile.get(), pattern->densityFile);
+    return pattern;
+}
+
+//******************************************************************************
+
+PatternPtr Parser::ParseHardObjectPattern()
+{
+    shared_ptr<HardObjectPattern> pattern(new HardObjectPattern());
+
+    Parse_Begin();
+
+    vector<ObjectPtr> tempObjects;
+    Parse_Bound_Clip(tempObjects, false);
+
+    if(tempObjects.size() != 1)
+        Error ("object or object identifier expected.");
+    pattern->pObject = tempObjects[0];
+
+    Parse_End();
+
+    EXPECT
+        CASE (RECURSION_LIMIT_TOKEN)
+            pattern->recursion_limit = Parse_Int_With_Minimum(4, "hard_object recursion_limit minimum");; // 4-n
+        END_CASE
+        CASE (RADIUS_TOKEN)
+            pattern->radius = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON; // MIN_ISECT_DEPTH+ EPSILON prevents ray alignment FP noise.
+        END_CASE
+        CASE (SAMPLES_TOKEN)
+            pattern->samples = min(200,Parse_Int_With_Minimum(3, "hard_object samples minimum (max is 200)"));
+        END_CASE
+        OTHERWISE
+            UNGET
+            EXIT
+        END_CASE
+    END_EXPECT
+
     return pattern;
 }
 
@@ -1705,6 +1740,11 @@ void Parser::Parse_Pattern (PATTERN_T *New, BlendMapTypeId TPat_Type)
             New->pattern = ParsePotentialPattern();
         END_CASE
 
+        CASE (HARD_OBJECT_TOKEN)
+            New->Type = GENERIC_PATTERN;
+            New->pattern = ParseHardObjectPattern();
+        END_CASE
+
         CASE (SOFT_OBJECT_TOKEN)
             New->Type = GENERIC_PATTERN;
             New->pattern = ParseSoftObjectPattern();
@@ -1728,6 +1768,18 @@ void Parser::Parse_Pattern (PATTERN_T *New, BlendMapTypeId TPat_Type)
                 Only_In("accuracy", "isosurface, normal pattern or parametric");
             }
             (reinterpret_cast<TNORMAL *>(New))->Delta = Parse_Float();
+        END_CASE
+
+        CASE (RECURSION_LIMIT_TOKEN)
+            Only_In("recursion_limit", "radiosity or hard_object pattern");
+        END_CASE
+
+        CASE (RADIUS_TOKEN)
+            Only_In("radius", "light or hard_object pattern");
+        END_CASE
+
+        CASE (SAMPLES_TOKEN)
+            Only_In("samples", "media, subsurface or hard_object pattern");
         END_CASE
 
         CASE (SPACING_TOKEN)
@@ -5142,6 +5194,11 @@ void Parser::Parse_PatternFunction(TPATTERN *New)
         CASE (POTENTIAL_TOKEN)
             New->Type = GENERIC_PATTERN;
             New->pattern = ParsePotentialPattern();
+        END_CASE
+
+        CASE (HARD_OBJECT_TOKEN)
+            New->Type = GENERIC_PATTERN;
+            New->pattern = ParseHardObjectPattern();
         END_CASE
 
         CASE (SOFT_OBJECT_TOKEN)
