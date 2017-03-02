@@ -882,13 +882,17 @@ PatternPtr Parser::ParseHardObjectPattern()
 
     EXPECT
         CASE (RECURSION_LIMIT_TOKEN)
-            pattern->recursion_limit = Parse_Int_With_Minimum(4, "hard_object recursion_limit minimum");; // 4-n
+            pattern->recursion_limit = Parse_Int_With_Minimum(kHard_ObjectRecursion_Limit_Min,
+                                                              "hard_object recursion_limit minimum");
         END_CASE
         CASE (RADIUS_TOKEN)
-            pattern->radius = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON; // MIN_ISECT_DEPTH+ EPSILON prevents ray alignment FP noise.
+            // MIN_ISECT_DEPTH+ EPSILON prevents ray alignment FP noise.
+            pattern->radius = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON;
         END_CASE
         CASE (SAMPLES_TOKEN)
-            pattern->samples = min(200,Parse_Int_With_Minimum(3, "hard_object samples minimum (max is 200)"));
+            pattern->samples = (size_t) Parse_Int_With_Minimum(kHard_ObjectSamples_Min,"hard_object samples minimum");
+            if (pattern->samples > kHard_ObjectSamples_Max)
+                Error ("hard_object samples must be <= %d.",kHard_ObjectSamples_Max);
         END_CASE
         OTHERWISE
             UNGET
@@ -1100,7 +1104,8 @@ PatternPtr Parser::ParseSoftObjectPattern()
 
     EXPECT
         CASE (SPACING_TOKEN)
-            pattern->spacing = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON; // EPSILON prevents grid/ray FP noise.
+            // EPSILON prevents grid/ray FP noise.
+            pattern->spacing = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON;
         END_CASE
         CASE (STRENGTH_TOKEN)
             pattern->strength = max(Parse_Float(),EPSILON);

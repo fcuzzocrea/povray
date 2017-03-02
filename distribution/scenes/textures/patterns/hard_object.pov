@@ -5,9 +5,9 @@
 //
 // Persistence Of Vision Ray Tracer ('POV-Ray') sample file.
 //
-// soft_object pattern example soft_object.pov.
+// hard_object pattern example hard_object.pov.
 //
-// +w450 +h300 +a0.3
+// +w450 +h300 +a0.3 +am2 +r3
 
 #version 3.72;
 global_settings { assumed_gamma 1 }
@@ -57,18 +57,18 @@ background { color Grey50 }
 #include "functions.inc"
 #declare FnHardObj = function {
     pattern { hard_object { ObjectText }
-        radius 0.04
+        radius 0.08
         recursion_limit 10
         samples 22
-        turbulence VarTurb octaves 3 lambda 3
+        warp { turbulence VarTurb octaves 3 lambda 3 }
     }
 }
-#declare Fn01 = function (x,y,z) {
+#declare FnHardObj01 = function (x,y,z) {
     0.015-FnHardObj(x,y,z)
 }
 #declare Grenadier = srgbft <0.8353,0.2745,0,0,0>;
-#declare Iso99 = isosurface {
-    function { Fn01(x,y,z) }
+#declare IsoText = isosurface {
+    function { FnHardObj01(x,y,z) }
     contained_by {
         box { min_extent(ObjectText)-VarContainFuzz,
               max_extent(ObjectText)+VarContainFuzz
@@ -76,7 +76,7 @@ background { color Grey50 }
     }
     threshold 0
     accuracy 0.001
-    max_gradient 83.3  // Less than max found for performance & OK look
+    max_gradient 85.0 // Use less than max for performance. Often looks OK.
     max_trace 1
     pigment { color Grenadier }
     translate <0,0,-0.6>
@@ -88,5 +88,6 @@ light_source { Light00 }
 object { CylinderX }
 object { CylinderY }
 object { CylinderZ }
-object { Iso99 }
-object { ObjectText }
+object { ObjectText } // See soft_object.pov for faster by char method.
+object { IsoText }
+

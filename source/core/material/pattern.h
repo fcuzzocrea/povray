@@ -123,6 +123,10 @@ enum DensityFileInterpolationType
 /// Maximum `exponent` parameter value for fractal patterns.
 const int kFractalMaxExponent = 33;
 
+/// hard_object pattern limits for options: samples, recursion_limit.
+const size_t kHard_ObjectSamples_Min = 3;
+const size_t kHard_ObjectSamples_Max = 1000;
+const size_t kHard_ObjectRecursion_Limit_Min = 4;
 
 //******************************************************************************
 // Forward declarations to avoid pulling in entire header files.
@@ -567,10 +571,13 @@ struct HardObjectPattern : public ContinuousPattern
     HardObjectPattern(const HardObjectPattern& obj);
     virtual ~HardObjectPattern();
     virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    inline bool btest(const Vector3d& EPoint, const Vector3d& MoveBy, TraceThreadData *pThread) const;
-    bool proximity(const Vector3d& EPoint, const DBL& testRadius, const size_t& samples, TraceThreadData *pThread) const;
-    DBL bsearch (const Vector3d& EPoint, DBL CurrentValue, DBL CurrentValueDelta, size_t& depth, const size_t& maxdepth, TraceThreadData *pThread) const;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection,
+                            const Ray *pRay, TraceThreadData *pThread) const;
+    inline bool Inside(const Vector3d& EPoint, const Vector3d& MoveBy, TraceThreadData *pThread) const;
+    bool SphericalSamplesInside(const Vector3d& EPoint, const DBL& TestRadius,
+                                const size_t& samples, TraceThreadData *pThread) const;
+    DBL RadiusFitsInside(const Vector3d& EPoint, DBL CurrentRadius, DBL CurrentRadiusDelta,
+                         size_t& Depth, const size_t& MaxDepth, TraceThreadData *pThread) const;
 };
 
 /// Implements the `hexagon` pattern.
@@ -630,7 +637,8 @@ struct ObjectPattern : public DiscretePattern
     ObjectPattern(const ObjectPattern& obj);
     virtual ~ObjectPattern();
     virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection,
+                         const Ray *pRay, TraceThreadData *pThread) const;
     virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
     virtual unsigned int NumDiscreteBlendMapEntries() const;
 };
@@ -741,10 +749,10 @@ struct SoftObjectPattern : public ContinuousPattern
     SoftObjectPattern(const SoftObjectPattern& obj);
     virtual ~SoftObjectPattern();
     virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    inline DBL fblob(const DBL v, const DBL s) const;
-    inline void calcAllDiffsSqrd(DBL *aryd, const DBL axisVal, const DBL spacing) const;
-
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection,
+                            const Ray *pRay, TraceThreadData *pThread) const;
+    inline DBL Blob(const DBL v, const DBL s) const;
+    inline void CalcAllDiffsSqrd(DBL *aryd, const DBL axisVal, const DBL spacing) const;
 };
 
 /// Implements the `slope` pattern.
