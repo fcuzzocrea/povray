@@ -7975,11 +7975,22 @@ inline bool HardObjectPattern::Inside(const Vector3d& EPoint, const Vector3d& Mo
 {
     return Inside_Object(EPoint+MoveBy, pObject, pThread);
 
-  // On the fly generated samples like below helpful, but what speed, smoothness tradeoff makes sense...
+  // Note: On the fly generated samples like below helpful to result , but what speed, smoothness tradeoff makes sense?
+  // Also leaning toward a slightly perturbed sample over the opposite side of 'sphere' example below if done.
   //return Inside_Object(EPoint+MoveBy, pObject, pThread) && Inside_Object(EPoint-MoveBy, pObject, pThread);
 
 }
 
+//---- Notes on samples as header to fit paper ref in <120 chars.
+// Note: Tried various methods and settled on E.B. Saff and A.B.J. Kuijlaars method.
+// See:
+// https://perswww.kuleuven.be/~u0017946/publications/Papers97/art97a-Saff-Kuijlaars-MI/Saff-Kuijlaars-MathIntel97.pdf
+// Once the initial spherical points created, some tcl code was used to pick one
+// then always the next chosen is the furthest from all already picked.
+//
+// Note: The 0,0,0 point is not always needed, but is useful to have when experimenting
+// with alternative overall methods. Once sure it not really needed it should be pulled.
+//
 bool HardObjectPattern::SphericalSamplesInside(const Vector3d& EPoint, const DBL& TestRadius,
                                                const size_t& samples, TraceThreadData *pThread) const
 {
