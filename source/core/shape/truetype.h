@@ -73,6 +73,34 @@ namespace pov
 ///
 //******************************************************************************
 
+/// @note(1)
+/// The existing code creates one large glyph from the input string.
+///
+/// @note(2)
+/// The existing code doesn't support the winding test method for inside and
+/// outside determination, but rather segment/curve crossing tests which may
+/// render some fonts incorrectly.  An outline with overlapping contours for
+/// example.
+///
+/// @note(3)
+/// Most of the code dates from the early 1990s and is in need of update.
+/// Support for right to left, vertical fonts and other unsupported
+/// extensions.
+///
+/// @note(4)
+/// The basic intersection and inside_glyph testing as coded relies on the
+/// first & first/last coordinate being on curve which is strictly not
+/// required - though many fonts examined appear to follow this convention.
+/// Related, the wrap of the final x2 point to the first point looks to be
+/// redundant for most fonts as they already repeat the first and last point.
+///
+/// @note(5)
+/// For better performance - at the expense of a little storage - the
+/// generated on curve points could be created on the original read of the
+/// font's glyphs also fixing the exposure to the first, first and last or
+/// all points being control points.  Should our built in fonts be processed
+/// to have all the on curve points?
+///
 
 /*****************************************************************************
 * Global typedefs
@@ -118,12 +146,15 @@ class TrueType final : public ObjectBase
         virtual void Transform(const TRANSFORM *) override;
         virtual void Compute_BBox() override;
 
-        static void ProcessNewTTF(CSG *Object, TrueTypeFont* font, const UCS2 *text_string, DBL depth, const Vector3d& offset);
+        static void ProcessNewTTF(CSG *Object, TrueTypeFont* font, const UCS2 *text_string,
+                                  DBL depth, const Vector3d& offset);
     protected:
-        bool Inside_Glyph(double x, double y, const GlyphStruct* glyph) const;
-        int solve_quad(double *x, double *y, double mindist, DBL maxdist) const;
-        void GetZeroOneHits(const GlyphStruct* glyph, const Vector3d& P, const Vector3d& D, DBL glyph_depth, double *t0, double *t1) const;
-        bool GlyphIntersect(const Vector3d& P, const Vector3d& D, const GlyphStruct* glyph, DBL glyph_depth, const BasicRay &ray, IStack& Depth_Stack, TraceThreadData *Thread);
+        bool Inside_Glyph(DBL x, DBL y, const GlyphStruct* glyph) const;
+        int solve_quad(DBL *x, DBL *y, DBL mindist, DBL maxdist) const;
+        void GetZeroOneHits(const GlyphStruct* glyph, const Vector3d& P, const Vector3d& D,
+                            DBL glyph_depth, DBL *t0, DBL *t1) const;
+        bool GlyphIntersect(const Vector3d& P, const Vector3d& D, const GlyphStruct* glyph,
+                            DBL glyph_depth, const BasicRay &ray, IStack& Depth_Stack, TraceThreadData *Thread);
 };
 
 /// @}
