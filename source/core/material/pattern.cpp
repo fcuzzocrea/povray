@@ -6142,7 +6142,7 @@ DBL DensityFilePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *
     size_t rx[8],ry[8],rz[8];
     DBL    rxd[8],ryd[8],rzd[8];
     size_t startidx, stopidx;
-    DBL    runningval,strengthBias;
+    DBL    runningDistSqrd,runningval,strengthBias;
     unsigned short tmpUshort;
     unsigned int   tmpUint;
     unsigned long  tmpUlong;
@@ -6424,6 +6424,122 @@ DBL DensityFilePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *
                     }
                     density = min(1.0,runningval);
                     break;  // Break for last case in blob switch
+                case kDensityFileInterpolation_NearestNonZeroR:
+                case kDensityFileInterpolation_NearestNonZero:
+                    Ex -= 1.0/(DBL)Data->Sx/2.0; // Adjustment to voxel center
+                    Ey -= 1.0/(DBL)Data->Sy/2.0;
+                    Ez -= 1.0/(DBL)Data->Sz/2.0;
+
+                    this_x = Ex * (DBL)(Data->Sx);
+                    this_y = Ey * (DBL)(Data->Sy);
+                    this_z = Ez * (DBL)(Data->Sz);
+
+                    x1 = (size_t)this_x;
+                    y1 = (size_t)this_y;
+                    z1 = (size_t)this_z;
+
+                    rx[3]=max(0,(int)x1);   ry[3]=max(0,(int)y1);   rz[3]=max(0,(int)z1);
+                    rx[2]=max(0,(int)x1-1); ry[2]=max(0,(int)y1-1); rz[2]=max(0,(int)z1-1);
+                    rx[1]=max(0,(int)x1-2); ry[1]=max(0,(int)y1-2); rz[1]=max(0,(int)z1-2);
+                    rx[0]=max(0,(int)x1-3); ry[0]=max(0,(int)y1-3); rz[0]=max(0,(int)z1-3);
+                    //---
+                    rx[4]=min(Data->Sx-1,x1+1); ry[4]=min(Data->Sy-1,y1+1); rz[4]=min(Data->Sz-1,z1+1);
+                    rx[5]=min(Data->Sx-1,x1+2); ry[5]=min(Data->Sy-1,y1+2); rz[5]=min(Data->Sz-1,z1+2);
+                    rx[6]=min(Data->Sx-1,x1+3); ry[6]=min(Data->Sy-1,y1+3); rz[6]=min(Data->Sz-1,z1+3);
+                    rx[7]=min(Data->Sx-1,x1+4); ry[7]=min(Data->Sy-1,y1+4); rz[7]=min(Data->Sz-1,z1+4);
+
+                    calcAllDiffsSqrd(rxd,this_x,rx);
+                    calcAllDiffsSqrd(ryd,this_y,ry);
+                    calcAllDiffsSqrd(rzd,this_z,rz);
+
+                    startidx     = 0;
+                    stopidx      = 7;
+
+                    runningval=0.0;
+                    runningDistSqrd=1e30;
+                    if(Data->Type == 4)
+                    {
+                        for(i = startidx; i <= stopidx; i++)
+                        {
+                            for(j = startidx; j <= stopidx; j++)
+                            {
+                                for(k = startidx; k <= stopidx; k++)
+                                {
+                                    tmpUlong=Data->Density32[rz[i] * Data->Sy * Data->Sx + ry[j] * Data->Sx + rx[k]];
+                                    if ((tmpUlong) && ((rzd[i]+ryd[j]+rxd[k])<runningDistSqrd))
+                                    {
+                                        switch (densityFile->Interpolation)
+                                        {
+                                            case kDensityFileInterpolation_NearestNonZeroR:
+                                                runningDistSqrd=(rzd[i]+ryd[j]+rxd[k])+0.50*(-0.5+(DBL)rand()/RAND_MAX);
+                                                break;
+                                            case kDensityFileInterpolation_NearestNonZero:
+                                            default:
+                                                runningDistSqrd=(rzd[i]+ryd[j]+rxd[k]);
+                                                break;
+                                        }
+                                        runningval=(DBL)tmpUlong/(DBL)UNSIGNED32_MAX;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if(Data->Type == 2)
+                    {
+                        for(i = startidx; i <= stopidx; i++)
+                        {
+                            for(j = startidx; j <= stopidx; j++)
+                            {
+                                for(k = startidx; k <= stopidx; k++)
+                                {
+                                    tmpUint=Data->Density16[rz[i] * Data->Sy * Data->Sx + ry[j] * Data->Sx + rx[k]];
+                                    if ((tmpUint) && ((rzd[i]+ryd[j]+rxd[k])<runningDistSqrd))
+                                    {
+                                        switch (densityFile->Interpolation)
+                                        {
+                                            case kDensityFileInterpolation_NearestNonZeroR:
+                                                runningDistSqrd=(rzd[i]+ryd[j]+rxd[k])+0.50*(-0.5+(DBL)rand()/RAND_MAX);
+                                                break;
+                                            case kDensityFileInterpolation_NearestNonZero:
+                                            default:
+                                                runningDistSqrd=(rzd[i]+ryd[j]+rxd[k]);
+                                                break;
+                                        }
+                                        runningval=(DBL)tmpUint/(DBL)UNSIGNED16_MAX;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if(Data->Type == 1)
+                    {
+                        for(i = startidx; i <= stopidx; i++)
+                        {
+                            for(j = startidx; j <= stopidx; j++)
+                            {
+                                for(k = startidx; k <= stopidx; k++)
+                                {
+                                    tmpUshort=Data->Density8[rz[i] * Data->Sy * Data->Sx + ry[j] * Data->Sx + rx[k]];
+                                    if ((tmpUshort) && ((rzd[i]+ryd[j]+rxd[k])<runningDistSqrd))
+                                    {
+                                        switch (densityFile->Interpolation)
+                                        {
+                                            case kDensityFileInterpolation_NearestNonZeroR:
+                                                runningDistSqrd=(rzd[i]+ryd[j]+rxd[k])+0.50*(-0.5+(DBL)rand()/RAND_MAX);
+                                                break;
+                                            case kDensityFileInterpolation_NearestNonZero:
+                                            default:
+                                                runningDistSqrd=(rzd[i]+ryd[j]+rxd[k]);
+                                                break;
+                                        }
+                                        runningval=(DBL)tmpUshort/(DBL)UNSIGNED8_MAX;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    density = min(1.0-EPSILON,runningval);
+                    break;  // Break for nearest non zero search
             }
         }
         else

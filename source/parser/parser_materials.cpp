@@ -2085,6 +2085,8 @@ void Parser::Parse_Pattern (PATTERN_T *New, BlendMapTypeId TPat_Type)
                     case kDensityFileInterpolation_BlobFour:
                     case kDensityFileInterpolation_BlobSix:
                     case kDensityFileInterpolation_BlobEight:
+                    case kDensityFileInterpolation_NearestNonZeroR:
+                    case kDensityFileInterpolation_NearestNonZero:
                     case kDensityFileInterpolation_Trilinear_Shftd:
                     case kDensityFileInterpolation_Tricubic_Shftd:
                         break;
@@ -5453,6 +5455,8 @@ void Parser::Parse_PatternFunction(TPATTERN *New)
                     case kDensityFileInterpolation_BlobFour:
                     case kDensityFileInterpolation_BlobSix:
                     case kDensityFileInterpolation_BlobEight:
+                    case kDensityFileInterpolation_NearestNonZeroR:
+                    case kDensityFileInterpolation_NearestNonZero:
                     case kDensityFileInterpolation_Trilinear_Shftd:
                     case kDensityFileInterpolation_Tricubic_Shftd:
                         break;
