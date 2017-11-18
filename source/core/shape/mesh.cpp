@@ -274,9 +274,7 @@ bool Mesh::Inside(const Vector3d& IPoint, TraceThreadData *Thread) const
     /* Transform the ray into mesh space. */
     if (Trans != nullptr)
     {
-        MInvTransRay(ray, ray, Trans);
-
-        ray.Direction.normalize();
+        MInvTransPoint(ray.Origin, ray.Origin, Trans);
     }
 
     found = 0;
