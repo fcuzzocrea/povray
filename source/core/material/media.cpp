@@ -429,8 +429,10 @@ void MediaFunction::ComputeMediaRegularSampling(MediaVector& medias, LightSource
     }
 }
 
-void MediaFunction::ComputeMediaAdaptiveSampling(MediaVector& medias, LightSourceEntryVector& lights, MediaIntervalVector& mediaintervals,
-                                                 const Ray& ray, const Media *IMedia, DBL aa_threshold, int minsamples, bool ignore_photons, bool use_scattering)
+void MediaFunction::ComputeMediaAdaptiveSampling(MediaVector& medias, LightSourceEntryVector& lights,
+                                                 MediaIntervalVector& mediaintervals, const Ray& ray,
+                                                 const Media *IMedia, DBL aa_threshold, int minsamples,
+                                                 bool ignore_photons, bool use_scattering)
 {
     // adaptive sampling
     int subIntervalCount;
@@ -454,7 +456,9 @@ void MediaFunction::ComputeMediaAdaptiveSampling(MediaVector& medias, LightSourc
 
         dd = 1.0 / (DBL)subIntervalCount;
 
-        ComputeOneMediaSample(medias, lights, *i, ray, dd * IMedia->Jitter * (randomNumberGenerator() - 0.5), C0, od0, 3, ignore_photons, use_scattering, false);
+        ComputeOneMediaSample(medias, lights, *i, ray,
+                              (IMedia->Jitter==0.0 ? 0.0 : dd * IMedia->Jitter * (randomNumberGenerator() - 0.5)),
+                              C0, od0, 3, ignore_photons, use_scattering, false);
 
         // clear out od & te
         i->te.Clear();
@@ -464,9 +468,12 @@ void MediaFunction::ComputeMediaAdaptiveSampling(MediaVector& medias, LightSourc
         for(j = 1; j <= subIntervalCount; j++)
         {
             d1 = d0 + dd;
-            ComputeOneMediaSample(medias, lights, *i, ray, d1 + dd * IMedia->Jitter * (randomNumberGenerator() - 0.5), C1, od1, 3, ignore_photons, use_scattering, false);
-            ComputeOneMediaSampleRecursive(medias, lights, *i, ray, d0, d1, Result, C0, C1, ODResult, od0, od1, IMedia->AA_Level - 1,
-                                           IMedia->Jitter, aa_threshold, ignore_photons, use_scattering, false);
+            ComputeOneMediaSample(medias, lights, *i, ray,
+                (IMedia->Jitter==0.0 ? d1 : d1 + dd * IMedia->Jitter * (randomNumberGenerator() - 0.5)),
+                C1, od1, 3, ignore_photons, use_scattering, false);
+            ComputeOneMediaSampleRecursive(medias, lights, *i, ray, d0, d1, Result, C0, C1, ODResult, od0, od1,
+                                           IMedia->AA_Level - 1, IMedia->Jitter, aa_threshold, ignore_photons,
+                                           use_scattering, false);
 
             // keep a sum of the results
             // do some attenuation, too, since we are doing samples in order
@@ -1037,9 +1044,12 @@ void MediaFunction::ComputeOneMediaSample(MediaVector& medias, LightSourceEntryV
     mediainterval.samples++;
 }
 
-void MediaFunction::ComputeOneMediaSampleRecursive(MediaVector& medias, LightSourceEntryVector& lights, MediaInterval& mediainterval, const Ray& ray,
-                                                   DBL d1, DBL d3, MathColour& Result, const MathColour& C1, const MathColour& C3, MathColour& ODResult, const MathColour& od1, const MathColour& od3,
-                                                   int depth, DBL Jitter, DBL aa_threshold, bool ignore_photons, bool use_scattering, bool photonPass)
+void MediaFunction::ComputeOneMediaSampleRecursive(MediaVector& medias, LightSourceEntryVector& lights,
+                                                   MediaInterval& mediainterval, const Ray& ray, DBL d1, DBL d3,
+                                                   MathColour& Result, const MathColour& C1, const MathColour& C3,
+                                                   MathColour& ODResult, const MathColour& od1, const MathColour& od3,
+                                                   int depth, DBL Jitter, DBL aa_threshold, bool ignore_photons,
+                                                   bool use_scattering, bool photonPass)
 {
     MathColour C2, Result2;
     MathColour od2, ODResult2;
@@ -1047,13 +1057,16 @@ void MediaFunction::ComputeOneMediaSampleRecursive(MediaVector& medias, LightSou
 
     // d2 is between d1 and d3 (all in range of 0..1
     d2 = 0.5 * (d1 + d3);
-    jdist = d2 + Jitter * (d3 - d1) * (randomNumberGenerator() - 0.5);
+    if(Jitter==0.0)
+        jdist = d2;
+    else
+        jdist = d2 + Jitter * (d3 - d1) * (randomNumberGenerator() - 0.5);
 
-    ComputeOneMediaSample(medias, lights, mediainterval, ray, jdist, C2, od2, 3, ignore_photons, use_scattering, photonPass);
+    ComputeOneMediaSample(medias, lights, mediainterval, ray, jdist, C2, od2, 3,
+                          ignore_photons, use_scattering, photonPass);
 
-    // TODO FIXME - this gives C1, C2 and C3 a weigt of 1:1:1,
-    // which is no good as C1 and C3 are on the border of the interval, and may influence the neighboring interval as well.
-    // (see individual comments for how to fix this.)
+    // TODO FIXME - this gives C1, C2 and C3 a weigt of 1:1:1, which is no good as C1 and C3 are on the border of the
+    // interval, and may influence the neighboring interval as well.  (see individual comments for how to fix this.)
 
     // if we're at max depth, then let's just use this last sample and average it with the two end points
     if(depth <= 0)
@@ -1077,17 +1090,19 @@ void MediaFunction::ComputeOneMediaSampleRecursive(MediaVector& medias, LightSou
         ComputeOneMediaSampleRecursive(medias, lights, mediainterval, ray, d1, d2, Result2, C1, C2, ODResult2, od1, od2,
                                        depth - 1, Jitter, aa_threshold, ignore_photons, use_scattering, photonPass);
 
-        // average colors & optical depth (well, actually do half of the averaging; we'll ad another "half a color" later)
+        // average colors & optical depth (well, actually do half of the averaging;
+        // we'll ad another "half a color" later)
         Result   = Result2   / 2.0;
         ODResult = ODResult2 / 2.0;
         // TODO FIXME - this is actually ok, no fixing required
     }
     else
     {
-        // no new points needed - just average what we've got.
-        // (we're giving c1 and c2 a relative weight of 2:1, as c2 - the middle point - will make another appearance later)
+        // no new points needed - just average what we've got.  (we're giving c1 and c2 a relative weight of 2:1, as c2
+        // - the middle point - will make another appearance later)
 
-        // average colors & optical depth (well, actually do half of the averaging; we'll ad another "half a color" later)
+        // average colors & optical depth (well, actually do half of the averaging;
+        // we'll ad another "half a color" later)
         Result   = C1  / 3.0 + C2  / 6.0;
         ODResult = od1 / 3.0 + od2 / 6.0;
         // TODO FIXME - this should be
@@ -1100,18 +1115,19 @@ void MediaFunction::ComputeOneMediaSampleRecursive(MediaVector& medias, LightSou
     if(ColourDistance(C2, C3) > aa_threshold)
     {
         // recurse again
-        ComputeOneMediaSampleRecursive(medias, lights, mediainterval, ray,  d2, d3, Result2, C2, C3, ODResult2, od2, od3,
+        ComputeOneMediaSampleRecursive(medias, lights, mediainterval, ray, d2, d3, Result2, C2, C3, ODResult2, od2, od3,
                                        depth - 1, Jitter, aa_threshold, ignore_photons, use_scattering, photonPass);
 
-        // average colors & optical depth (well, actually do half of the averaging; we already did "half a color" earlier)
+        // average colors & optical depth (well, actually do half of the averaging;
+        // we already did "half a color" earlier)
         Result   += Result2   / 2.0;
         ODResult += ODResult2 / 2.0;
         // TODO FIXME - this is actually ok, no fixing required
     }
     else
     {
-        // no new points needed - just average what we've got.
-        // (we're giving c2 and c3 a relative weight of 1:2, as c2 - the middle point - already made an appearance earlier)
+        // no new points needed - just average what we've got.  (we're giving c2 and c3 a relative weight of 1:2, as c2
+        // - the middle point - already made an appearance earlier)
 
         // average colors & optical depth (well, actually do half of the averaging; we already did "half a color" earlier)
         Result   += C2  / 6.0 + C3  / 3.0;
