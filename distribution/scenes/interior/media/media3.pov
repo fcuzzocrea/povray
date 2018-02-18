@@ -33,16 +33,16 @@ camera {
 //
 
 box {<-2,-0.999,-2>, < 2, 0.001, 2>
-	texture {pigment {color rgbf 1}}
-	hollow
-	interior {
-		media {
-			scattering { 1, rgb 0.2}
-			intervals 1
-			samples 20
-			method 3
-		}
-	}
+        texture {pigment {color rgbf 1}}
+        hollow
+        interior {
+                media {
+                        scattering { 1, rgb 0.2}
+                        intervals 1
+                        samples 44
+                        method 3
+                }
+        }
 }
 
 

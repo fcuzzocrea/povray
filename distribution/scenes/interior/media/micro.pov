@@ -17,7 +17,7 @@
 #include "functions.inc"
 
 global_settings {
-  assumed_gamma 1.5
+  assumed_gamma 1.0
 }
 
 #default {finish {ambient 0}}
@@ -38,8 +38,8 @@ box {<-1,-1,-1>, < 1, 1, 1>
     hollow
     interior {
         media {
-            emission color rgb < 0.5, 1, 0.1>*1.75
-            intervals 2 samples 32
+            emission color srgb < 0.5, 1, 0.1>
+            intervals 1 samples 32
             method 3
             aa_threshold 0.1 aa_level 5
             density {crackle
@@ -62,8 +62,8 @@ box {<-1,-1,-1>, < 1, 1, 1>
             }
         }
         media {
-            emission color rgb < 1, 0.5, 0.1>*1.75
-            intervals 2 samples 32
+            emission color srgb < 1, 0.5, 0.1>
+            intervals 1 samples 32
             method 3
             aa_threshold 0.1 aa_level 5
             density {crackle
@@ -86,8 +86,8 @@ box {<-1,-1,-1>, < 1, 1, 1>
             }
         }
         media {
-            emission color rgb < 0.5, 0.75, 1>*0.5
-            intervals 2 samples 32
+            emission color srgb < 0.5, 0.75, 1>*0.5
+            intervals 1 samples 32
             method 3
             aa_threshold 0.1 aa_level 5
             density {spherical
