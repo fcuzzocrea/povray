@@ -6,35 +6,33 @@
 // File: optics.pov
 // Author: Christopher J. Huff
 // Updated: 2013/02/15 for 3.7
+// Updated: 2018/02/03 code cleanup.
 //
 // -w320 -h240
 // -w800 -h600 +a0.3
 
 #version 3.7;
-global_settings { assumed_gamma 1.0 } 
 
 #include "colors.inc"
-
-#default {finish {ambient 0}}
-
 global_settings {
     assumed_gamma 1
     max_trace_level 5
     photons {
-//        spacing 0.025
+//      spacing 0.025      // 0.020 -> 163223 ; 0.025 -> 104897
         count 150000
         max_trace_level 9
-        media 100, 2
-//        media 500, 3
+        media 100, 2       // Code calc at 89 for count 150000.
     }
 }
+#default {finish {ambient 0}}
 
 #declare CamPos = < 0, 18, 0>;
 
 camera {
     location CamPos
-    right x*image_width/image_height // keep propotions with any aspect ratio
+    right x*image_width/image_height
     look_at < 0, 0, 0>
+    sky z
     angle 35
 }
 
@@ -51,17 +49,17 @@ light_source {<-150, 0.5, 0>, color rgb < 1.2, 1, 1.5>
     union {
         cylinder {From, To*(x+z), 0.1 scale < 1, 10*To.y, 1>
             texture {
-                pigment {checker color Gray90, color Gray70
+                pigment {
+                    checker color Gray70, color Gray40
                     scale 0.1
                 }
-                finish {brilliance 0.5}
             }
         }
         cylinder {From, To*(x+z), 0.025
             translate y*To
             texture {
                 pigment {color rgb < 1, 0.7, 0.2>}
-                finish {ambient 0.8}
+                finish {emission 0.8}
             }
         }
     }
@@ -69,18 +67,19 @@ light_source {<-150, 0.5, 0>, color rgb < 1.2, 1, 1.5>
 
 box {<-100,-1,-100>, < 100, 0, 100>
     texture {
-        pigment {checker color Gray90, color rgb < 0.2, 0, 0.4>}
-        finish {brilliance 0.25}
+        pigment {
+            checker color Gray90, color srgb < 0.2, 0, 0.4>
+        }
     }
 }
-box {<-7,-0.1,-3>, < 6, 1, 4> hollow
+box {<-7,-0.1,-3>, < 6, 2.01, 4> hollow
     texture {pigment {color rgbf 1}}
     interior {
         media {
             scattering {1, color White extinction 0}
-//            emission color White*0.2
             method 3
-            intervals 1 samples 4
+            intervals 1
+            samples 8
         }
     }
     photons {target}
@@ -135,38 +134,21 @@ texture {
 interior {ior 1.33}
 
 #macro PhotonTarget(Reflect, Refract, IgnorePhotons)
-	photons {
-		target
-		reflection Reflect
-		refraction Refract
-		#if(IgnorePhotons) collect off #end
-	}
+    photons {
+            target
+            reflection Reflect
+            refraction Refract
+            #if(IgnorePhotons) collect off #end
+    }
 #end
 
-
-/*#declare Fn = function {sin(z*pi)/5 - x}
-isosurface {
-    function {Fn(x,y,z)}
-    threshold 0
-    eval
-//    max_gradient 9.25
-    contained_by {box {<-1, 0,-2>, < 1, 1, 2>}}
-    texture {
-        pigment {color White}
-        finish {ambient 0 diffuse 0.2 reflection 0.8}
-    }
-    photons {target collect off}
-    rotate -y*15
-    translate < 2, 0, 0>
-}*/
-
 #macro Mirror(Pos, Ang, Width, Height, Tex)
-	box {<-0.1,-0.1,-Width/2>, < 0, Height, Width/2>
-	    texture {Tex}
-//	    PhotonTarget(yes, yes, yes)
-	    rotate -y*Ang
-	    translate Pos
-	}
+    box {<-0.1,-0.1,-Width/2>, < 0, Height, Width/2>
+        texture {Tex}
+        PhotonTarget(yes, yes, yes)
+        rotate -y*Ang
+        translate Pos
+    }
 #end
 
 object {Mirror(<-3, 0, 0>, 3*45, 2, 1, BlueMirrorTex)}
@@ -198,11 +180,10 @@ intersection {
 
 #declare R = 1;
 difference {
-	cylinder {<-0.1, 0, 0>, < R, 0, 0>, R}
-	sphere {< R, 0, 0>, R}
-//	texture {pigment {color White}}
-	texture {GlassTex1}
-	interior {GlassInt1}
-//	PhotonTarget(no, yes, yes)
-	translate <-1, 0.5, 3>
+    cylinder {<-0.1, 0, 0>, < R, 0, 0>, R}
+    sphere {< R, 0, 0>, R}
+    texture {GlassTex1}
+    interior {GlassInt1}
+    PhotonTarget(no, yes, yes)
+    translate <-1, 0.5, 3>
 }
