@@ -1096,7 +1096,10 @@ void PhotonMediaFunction::ComputeMediaAndDepositPhotons(MediaVector& medias, con
                                                isect.Depth - mediaintervals.back().s1,
                                                0, 0));
 
-    minSamples = IMedia->Min_Samples;
+    // NOTE: minSamples would be set here if using ComputeMediaAdaptiveSampling, but currently DepositMediaPhotons
+    // calculates its own internall 'minsamples' based upon photon settings despite the value being passed below.
+    // To set it is harmless to result, but it pointlessly costs cpu time.
+    // minSamples = IMedia->Min_Samples;
 
     // Sample all intervals.
     // NOTE: We probably should change this to use only one interval
@@ -1146,6 +1149,7 @@ void PhotonMediaFunction::DepositMediaPhotons(MathColour& colour, MediaVector& m
         {
             // too many steps - use fewer steps and a bigger spacing factor
             minsamples = sceneData->photonSettings.maxMediaSteps;
+
             if(!threadData->photonSourceLight->Parallel)
             {
                 mediaSpacingFactor =
@@ -1168,7 +1172,7 @@ void PhotonMediaFunction::DepositMediaPhotons(MathColour& colour, MediaVector& m
 
         for(j = 0; j < minsamples; j++)
         {
-            d0 = (j + 0.5 + randomNumberGenerator()*sceneData->photonSettings.jitter - 0.5*sceneData->photonSettings.jitter) / minsamples;
+            d0 = (j + randomNumberGenerator()) / minsamples;
             ComputeOneMediaSample(medias, lights, *i, ray, d0, C0, od0, 2 /* use method 2 */, ignore_photons, use_scattering, true);
 
             if (use_scattering && !ignore_photons)
