@@ -122,7 +122,7 @@ static int solve_cubic (const DBL *x, DBL *y);
 static int solve_quartic (const DBL *x, DBL *y);
 static int polysolve (int order, const DBL *Coeffs, DBL *roots);
 static int modp (const polynomial *u, const polynomial *v, polynomial *r);
-static int regula_falsa (int order, const DBL *coef, DBL a, DBL b, DBL *val);
+static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, int atmin, int  atmax, DBL *val);
 static int sbisect (int np, const polynomial *sseq, DBL min, DBL max, int atmin, int atmax, DBL *roots);
 static int numchanges (int np, const polynomial *sseq, DBL a);
 static DBL polyeval (DBL x, int n, const DBL *Coeffs);
@@ -448,7 +448,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL  max_value
     {
         /* first try using regula-falsa to find the root.  */
 
-        if (regula_falsa(sseq->ord, sseq->coef, min_value, max_value, roots))
+        if (regula_falsa(sseq, min_value, max_value, atmin, atmax, roots))
         {
             return(1);
         }
@@ -646,124 +646,154 @@ static DBL polyeval(DBL x, int n, const DBL *Coeffs)
 *
 ******************************************************************************/
 
-static int regula_falsa(int order, const DBL *coef, DBL a, DBL b, DBL *val)
+static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, int atmin, int atmax, DBL *val)
 {
-    int its;
+    bool found=false;
+    int its, order;
     DBL fa, fb, x, fx, lfx;
+    const DBL *coef;
+
+    order = sseq->ord;
+    coef  = sseq->coef;
 
     fa = polyeval(a, order, coef);
     fb = polyeval(b, order, coef);
 
     if (fa * fb > 0.0)
     {
-        return 0;
+        return(false);
     }
 
     if (fabs(fa) < SMALL_ENOUGH)
     {
         *val = a;
 
-        return(1);
+        found = true;
     }
 
-    if (fabs(fb) < SMALL_ENOUGH)
+    if ((!found) && (fabs(fb) < SMALL_ENOUGH))
     {
         *val = b;
 
-        return(1);
+        found = true;
     }
 
-    lfx = fa;
-
-    for (its = 0; its < MAX_ITERATIONS; its++)
+    if (!found)
     {
-        x = (fb * a - fa * b) / (fb - fa);
+        lfx = fa;
 
-        fx = polyeval(x, order, coef);
-
-        if (fabs(x) > RELERROR)
+        for (its = 0; its < MAX_ITERATIONS; its++)
         {
-            if (fabs(fx / x) < RELERROR)
+            x = (fb * a - fa * b) / (fb - fa);
+
+            fx = polyeval(x, order, coef);
+
+            if (fabs(x) > RELERROR)
             {
-                *val = x;
-
-                return(1);
-            }
-        }
-        else
-        {
-            if (fabs(fx) < RELERROR)
-            {
-                *val = x;
-
-                return(1);
-            }
-        }
-
-        if (fa < 0)
-        {
-            if (fx < 0)
-            {
-                a = x;
-
-                fa = fx;
-
-                if ((lfx * fx) > 0)
+                if (fabs(fx / x) < RELERROR)
                 {
-                    fb /= 2;
+                    *val = x;
+
+                    found = true;
+
+                    break;
                 }
             }
             else
             {
-                b = x;
-
-                fb = fx;
-
-                if ((lfx * fx) > 0)
+                if (fabs(fx) < RELERROR)
                 {
-                    fa /= 2;
+                    *val = x;
+
+                    found = true;
+
+                    break;
                 }
             }
-        }
-        else
-        {
-            if (fx < 0)
+
+            if (fa < 0)
             {
-                b = x;
-
-                fb = fx;
-
-                if ((lfx * fx) > 0)
+                if (fx < 0)
                 {
-                    fa /= 2;
+                    a = x;
+
+                    fa = fx;
+
+                    if ((lfx * fx) > 0)
+                    {
+                        fb /= 2;
+                    }
+                }
+                else
+                {
+                    b = x;
+
+                    fb = fx;
+
+                    if ((lfx * fx) > 0)
+                    {
+                        fa /= 2;
+                    }
                 }
             }
             else
             {
-                a = x;
-
-                fa = fx;
-
-                if ((lfx * fx) > 0)
+                if (fx < 0)
                 {
-                    fb /= 2;
+                    b = x;
+
+                    fb = fx;
+
+                    if ((lfx * fx) > 0)
+                    {
+                        fa /= 2;
+                    }
+                }
+                else
+                {
+                    a = x;
+
+                    fa = fx;
+
+                    if ((lfx * fx) > 0)
+                    {
+                        fb /= 2;
+                    }
                 }
             }
+
+            /* Check for underflow in the domain */
+
+            if (fabs(b-a) < RELERROR)
+            {
+                *val = x;
+
+                found = true;
+
+                break;
+            }
+
+            lfx = fx;
         }
-
-        /* Check for underflow in the domain */
-
-        if (fabs(b-a) < RELERROR)
-        {
-            *val = x;
-
-            return(1);
-        }
-
-        lfx = fx;
     }
 
-    return(0);
+    // NOTE: Code above occasionally finds root values not actual roots.
+    // Due the fast paths at top mostly and other times unfortunate initial new x
+    // calculations leading to iterative refinement to an invalid root value.
+    // Oddly, the fast paths to bad roots at interval ends on the whole seem to
+    // help root resolution given the check below tosses the the problem back to
+    // the core bisection code.
+    //
+    if ((found) && (order > 3))
+    {
+        if ((numchanges(order, sseq, *val+SMALL_ENOUGH) != atmax) ||
+            (numchanges(order, sseq, *val-SMALL_ENOUGH) != atmin))
+        {
+            found = false;  // We didn't find a real root...
+        }
+    }
+
+    return(found);
 }
 
 
