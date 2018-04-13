@@ -122,7 +122,8 @@ static int solve_cubic (const DBL *x, DBL *y);
 static int solve_quartic (const DBL *x, DBL *y);
 static int polysolve (int order, const DBL *Coeffs, DBL *roots);
 static int modp (const polynomial *u, const polynomial *v, polynomial *r);
-static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, int atmin, int  atmax, DBL *val);
+static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
+                          const int atmin, const int atmax, DBL *val);
 static int sbisect (int np, const polynomial *sseq, DBL min, DBL max, int atmin, int atmax, DBL *roots);
 static int numchanges (int np, const polynomial *sseq, DBL a);
 static DBL polyeval (DBL x, int n, const DBL *Coeffs);
@@ -439,7 +440,7 @@ static int numchanges(int np, const polynomial *sseq, DBL a)
 *
 ******************************************************************************/
 
-static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL  max_value, int atmin, int  atmax, DBL *roots)
+static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value, int atmin, int atmax, DBL *roots)
 {
     DBL mid;
     int n1, n2, its, atmid;
@@ -448,7 +449,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL  max_value
     {
         /* first try using regula-falsa to find the root.  */
 
-        if (regula_falsa(sseq, min_value, max_value, atmin, atmax, roots))
+        if (regula_falsa(sseq, min_value, max_value, np, atmin, atmax, roots))
         {
             return(1);
         }
@@ -646,18 +647,15 @@ static DBL polyeval(DBL x, int n, const DBL *Coeffs)
 *
 ******************************************************************************/
 
-static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, int atmin, int atmax, DBL *val)
+static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
+                          const int atmin, const int atmax, DBL *val)
 {
     bool found=false;
-    int its, order;
+    int its;
     DBL fa, fb, x, fx, lfx;
-    const DBL *coef;
 
-    order = sseq->ord;
-    coef  = sseq->coef;
-
-    fa = polyeval(a, order, coef);
-    fb = polyeval(b, order, coef);
+    fa = polyeval(a, sseq->ord, sseq->coef);
+    fb = polyeval(b, sseq->ord, sseq->coef);
 
     if (fa * fb > 0.0)
     {
@@ -686,7 +684,7 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, int atmin, int a
         {
             x = (fb * a - fa * b) / (fb - fa);
 
-            fx = polyeval(x, order, coef);
+            fx = polyeval(x, sseq->ord, sseq->coef);
 
             if (fabs(x) > RELERROR)
             {
@@ -784,12 +782,12 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, int atmin, int a
     // help root resolution given the check below tosses the the problem back to
     // the core bisection code.
     //
-    if ((found) && (order > 3))
+    if (found)
     {
-        if ((numchanges(order, sseq, *val+SMALL_ENOUGH) != atmax) ||
-            (numchanges(order, sseq, *val-SMALL_ENOUGH) != atmin))
+        if ((numchanges(np, sseq, *val+SMALL_ENOUGH) != atmax) ||
+            (numchanges(np, sseq, *val-SMALL_ENOUGH) != atmin))
         {
-            found = false;  // We didn't find a real root...
+            found = false;  // We didn't find an actual root...
         }
     }
 
