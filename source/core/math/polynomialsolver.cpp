@@ -157,7 +157,7 @@ static int difficult_coeffs (int n, const DBL *x);
 *
 * CHANGES
 *
-*   Okt 1996 : Added bug fix by Heiko Eissfeldt. [DB]
+*   -
 *
 ******************************************************************************/
 
@@ -1494,7 +1494,7 @@ static int solve_quartic(const DBL *x, DBL *results)
 *
 * CHANGES
 *
-*   Okt 1996 : Added bug fix by Heiko Eissfeldt. [DB]
+*   -
 *
 ******************************************************************************/
 
@@ -1508,7 +1508,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     for (i = 0; i <= order; i++)
     {
-        sseq[0].coef[order-i] = Coeffs[i] / Coeffs[0];
+        sseq[0].coef[order-i] = Coeffs[i];
     }
 
     /* Build the Sturm sequence */
