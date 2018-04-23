@@ -128,8 +128,7 @@ static int solve_cubic (const DBL *x, DBL *y);
 static int solve_quartic (const DBL *x, DBL *y);
 static int polysolve (int order, const DBL *Coeffs, DBL *roots);
 static int modp (const polynomial *u, const polynomial *v, polynomial *r);
-static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
-                          const int atmin, const int atmax, DBL *val);
+static bool regula_falsa (const int order, const DBL *coef, DBL a, DBL b, DBL *val);
 static int sbisect (int np, const polynomial *sseq, DBL min, DBL max, int atmin, int atmax, DBL *roots);
 static int numchanges (int np, const polynomial *sseq, DBL a);
 static DBL polyeval (DBL x, int n, const DBL *Coeffs);
@@ -455,7 +454,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
     {
         /* first try using regula-falsa to find the root.  */
 
-        if (regula_falsa(sseq, min_value, max_value, np, atmin, atmax, roots))
+        if (regula_falsa(sseq->ord, sseq->coef, min_value, max_value, roots))
         {
             return(1);
         }
@@ -668,15 +667,14 @@ static DBL polyeval(DBL x, int n, const DBL *Coeffs)
 *
 ******************************************************************************/
 
-static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
-                          const int atmin, const int atmax, DBL *val)
+static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *val)
 {
     bool found=false;
     int its;
     DBL fa, fb, x, fx, lfx, mid;
 
-    fa = polyeval(a, sseq->ord, sseq->coef);
-    fb = polyeval(b, sseq->ord, sseq->coef);
+    fa = polyeval(a, order, coef);
+    fb = polyeval(b, order, coef);
 
     if (fa * fb > 0.0)
     {
@@ -691,7 +689,7 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
     {
         x = (fb * a - fa * b) / (fb - fa);
 
-        fx = polyeval(x, sseq->ord, sseq->coef);
+        fx = polyeval(x, order, coef);
 
         if (fabs(mid) > RELERROR)
         {
@@ -784,22 +782,6 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
         }
 
         lfx = fx;
-    }
-
-    // NOTE: Code above occasionally finds root values not actual roots.
-    // Due the fast paths at top mostly and other times unfortunate initial new x
-    // calculations leading to iterative refinement to an invalid root value.
-    // Oddly, the fast paths to bad roots at interval ends on the whole seem to
-    // help root resolution given the check below tosses the the problem back to
-    // the core bisection code.
-    //
-    if (found)
-    {
-        if ((numchanges(np, sseq, *val+SMALL_ENOUGH) != atmax) ||
-            (numchanges(np, sseq, *val-SMALL_ENOUGH) != atmin))
-        {
-            found = false;  // We didn't find an actual root...
-        }
     }
 
     return(found);
