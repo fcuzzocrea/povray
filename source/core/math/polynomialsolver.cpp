@@ -683,107 +683,17 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
         return(false);
     }
 
-    if (fabs(fa) < SMALL_ENOUGH)
+    lfx = fa;
+
+    for (its = 0; its < MAX_ITERATIONS; its++)
     {
-        *val = a;
+        x = (fb * a - fa * b) / (fb - fa);
 
-        found = true;
-    }
+        fx = polyeval(x, sseq->ord, sseq->coef);
 
-    if ((!found) && (fabs(fb) < SMALL_ENOUGH))
-    {
-        *val = b;
-
-        found = true;
-    }
-
-    if (!found)
-    {
-        lfx = fa;
-
-        for (its = 0; its < MAX_ITERATIONS; its++)
+        if (fabs(x) > RELERROR)
         {
-            x = (fb * a - fa * b) / (fb - fa);
-
-            fx = polyeval(x, sseq->ord, sseq->coef);
-
-            if (fabs(x) > RELERROR)
-            {
-                if (fabs(fx / x) < RELERROR)
-                {
-                    *val = x;
-
-                    found = true;
-
-                    break;
-                }
-            }
-            else
-            {
-                if (fabs(fx) < RELERROR)
-                {
-                    *val = x;
-
-                    found = true;
-
-                    break;
-                }
-            }
-
-            if (fa < 0)
-            {
-                if (fx < 0)
-                {
-                    a = x;
-
-                    fa = fx;
-
-                    if ((lfx * fx) > 0)
-                    {
-                        fb /= 2;
-                    }
-                }
-                else
-                {
-                    b = x;
-
-                    fb = fx;
-
-                    if ((lfx * fx) > 0)
-                    {
-                        fa /= 2;
-                    }
-                }
-            }
-            else
-            {
-                if (fx < 0)
-                {
-                    b = x;
-
-                    fb = fx;
-
-                    if ((lfx * fx) > 0)
-                    {
-                        fa /= 2;
-                    }
-                }
-                else
-                {
-                    a = x;
-
-                    fa = fx;
-
-                    if ((lfx * fx) > 0)
-                    {
-                        fb /= 2;
-                    }
-                }
-            }
-
-            /* Check for underflow in the domain */
-
-            if (fabs(b-a) < RELERROR)
+            if (fabs(fx / x) < RELERROR)
             {
                 *val = x;
 
@@ -791,9 +701,82 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
 
                 break;
             }
-
-            lfx = fx;
         }
+        else
+        {
+            if (fabs(fx) < RELERROR)
+            {
+                *val = x;
+
+                found = true;
+
+                break;
+            }
+        }
+
+        if (fa < 0)
+        {
+            if (fx < 0)
+            {
+                a = x;
+
+                fa = fx;
+
+                if ((lfx * fx) > 0)
+                {
+                    fb /= 2;
+                }
+            }
+            else
+            {
+                b = x;
+
+                fb = fx;
+
+                if ((lfx * fx) > 0)
+                {
+                    fa /= 2;
+                }
+            }
+        }
+        else
+        {
+            if (fx < 0)
+            {
+                b = x;
+
+                fb = fx;
+
+                if ((lfx * fx) > 0)
+                {
+                    fa /= 2;
+                }
+            }
+            else
+            {
+                a = x;
+
+                fa = fx;
+
+                if ((lfx * fx) > 0)
+                {
+                    fb /= 2;
+                }
+            }
+        }
+
+        /* Check for underflow in the domain */
+
+        if (fabs(b-a) < RELERROR)
+        {
+            *val = x;
+
+            found = true;
+
+            break;
+        }
+
+        lfx = fx;
     }
 
     // NOTE: Code above occasionally finds root values not actual roots.
