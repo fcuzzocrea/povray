@@ -673,7 +673,7 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
 {
     bool found=false;
     int its;
-    DBL fa, fb, x, fx, lfx;
+    DBL fa, fb, x, fx, lfx, mid;
 
     fa = polyeval(a, sseq->ord, sseq->coef);
     fb = polyeval(b, sseq->ord, sseq->coef);
@@ -685,17 +685,19 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
 
     lfx = fa;
 
+    mid = (a + b) / 2;
+
     for (its = 0; its < MAX_ITERATIONS; its++)
     {
         x = (fb * a - fa * b) / (fb - fa);
 
         fx = polyeval(x, sseq->ord, sseq->coef);
 
-        if (fabs(x) > RELERROR)
+        if (fabs(mid) > RELERROR)
         {
-            if (fabs(fx / x) < RELERROR)
+            if (fabs((b - a) / mid) < RELERROR)
             {
-                *val = x;
+                *val = mid;
 
                 found = true;
 
@@ -704,7 +706,15 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
         }
         else
         {
-            if (fabs(fx) < RELERROR)
+            if (fabs(b - a) < RELERROR)
+            {
+                *val = mid;
+
+                found = true;
+
+                break;
+            }
+            else if (fabs(fx) < (RELERROR/1000))
             {
                 *val = x;
 
@@ -720,6 +730,8 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
             {
                 a = x;
 
+                mid = (a + b) / 2;
+
                 fa = fx;
 
                 if ((lfx * fx) > 0)
@@ -730,6 +742,8 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
             else
             {
                 b = x;
+
+                mid = (a + b) / 2;
 
                 fb = fx;
 
@@ -745,6 +759,8 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
             {
                 b = x;
 
+                mid = (a + b) / 2;
+
                 fb = fx;
 
                 if ((lfx * fx) > 0)
@@ -756,6 +772,8 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
             {
                 a = x;
 
+                mid = (a + b) / 2;
+
                 fa = fx;
 
                 if ((lfx * fx) > 0)
@@ -763,17 +781,6 @@ static bool regula_falsa (const polynomial *sseq, DBL a, DBL b, const int np,
                     fb /= 2;
                 }
             }
-        }
-
-        /* Check for underflow in the domain */
-
-        if (fabs(b-a) < RELERROR)
-        {
-            *val = x;
-
-            found = true;
-
-            break;
         }
 
         lfx = fx;
