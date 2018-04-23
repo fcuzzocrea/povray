@@ -95,6 +95,12 @@ const DBL FOUR_M_PI_3 = 4.1887902047863909846168;
 /* Max number of iterations. */
 const int MAX_ITERATIONS = 50;
 
+// NOTE: max_value - min_value threshold below which regula_falsa function is
+// tried when there is a single root. Single roots happen often. Rays continued
+// by transparency or internal reflection for example will have just one root.
+// Idea is to delay use of regula_falsa method until the ray domain is small.
+const DBL REGULA_FALSA_THRESHOLD = 1.0;
+
 /* A coefficient smaller than SMALL_ENOUGH is considered to be zero (0.0). */
 const DBL SMALL_ENOUGH = 1.0e-10;
 
@@ -445,7 +451,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
     DBL mid;
     int n1, n2, its, atmid;
 
-    if ((atmin - atmax) == 1)
+    if (((atmin - atmax) == 1) && ((max_value - min_value) < REGULA_FALSA_THRESHOLD))
     {
         /* first try using regula-falsa to find the root.  */
 
@@ -553,6 +559,21 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
             n2 = sbisect(np, sseq, mid, max_value, atmid, atmax, &roots[n1]);
 
             return(n1 + n2);
+        }
+        else
+        {
+            if ((n1 == 1) && (n2 == 0) && ((mid - min_value) < REGULA_FALSA_THRESHOLD))
+            {
+                n1 = sbisect(np, sseq, min_value, mid, atmin, atmid, roots);
+
+                return(n1);
+            }
+            if ((n1 == 0) && (n2 == 1) && ((max_value - mid) < REGULA_FALSA_THRESHOLD))
+            {
+                n2 = sbisect(np, sseq, mid, max_value, atmid, atmax, roots);
+
+                return(n2);
+            }
         }
 
         if (n1 == 0)
