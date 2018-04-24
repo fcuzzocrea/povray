@@ -93,7 +93,7 @@ const DBL TWO_M_PI_3  = 2.0943951023931954923084;
 const DBL FOUR_M_PI_3 = 4.1887902047863909846168;
 
 /* Max number of iterations. */
-const int MAX_ITERATIONS = 50;
+const int MAX_ITERATIONS = 65;
 
 // NOTE: max_value - min_value threshold below which regula_falsa function is
 // tried when there is a single root. Single roots happen often. Rays continued
@@ -685,7 +685,13 @@ static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *va
 
     mid = (a + b) / 2;
 
-    for (its = 0; its < MAX_ITERATIONS; its++)
+    // NOTE: 2x MAX_ITERATIONS multiplier over sturm bisection requirement found to
+    // happen in practice. Necessary if you want regula_falsa to find the root
+    // where the algorithm converges very slowly. Later look to tune setting with
+    // respect to performance as this method vs sturm bisection run at different
+    // speeds.
+
+    for (its = 0; its < (MAX_ITERATIONS * 2); its++)
     {
         x = (fb * a - fa * b) / (fb - fa);
 
