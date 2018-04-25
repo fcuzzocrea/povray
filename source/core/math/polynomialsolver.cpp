@@ -95,6 +95,13 @@ const DBL FOUR_M_PI_3 = 4.1887902047863909846168;
 /* Max number of iterations. */
 const int MAX_ITERATIONS = 65;
 
+// NOTE: Value below which multiple roots ignored. Rays near tangent to surface
+// create extremely close roots and instability in sturm chain sign change
+// results from numchanges(). Also where the diagonal line of missed roots in
+// formed polynomials appears due root collapsing toward each other in
+// directions parallel to the ray.
+const DBL SBISECT_MULT_ROOT_THRESHOLD = 1e-6;
+
 // NOTE: max_value - min_value threshold below which regula_falsa function is
 // tried when there is a single root. Single roots happen often. Rays continued
 // by transparency or internal reflection for example will have just one root.
@@ -554,6 +561,11 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
 
         if ((n1 != 0) && (n2 != 0))
         {
+            if ((max_value - min_value) < SBISECT_MULT_ROOT_THRESHOLD)
+            {
+                return(0);
+            }
+
             n1 = sbisect(np, sseq, min_value, mid, atmin, atmid, roots);
             n2 = sbisect(np, sseq, mid, max_value, atmid, atmax, &roots[n1]);
 
