@@ -563,7 +563,8 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
         {
             if ((max_value - min_value) < SBISECT_MULT_ROOT_THRESHOLD)
             {
-                return(0);
+                roots[0] = mid;
+                return(1);
             }
 
             n1 = sbisect(np, sseq, min_value, mid, atmin, atmid, roots);
