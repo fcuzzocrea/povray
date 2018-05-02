@@ -1528,7 +1528,11 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     /* Get the total number of visible roots */
 
-    if ((nroots = visible_roots(np, sseq, &atmin, &atmax)) == 0)
+    // NOTE: Changed to <=0 test over ==0 due sphere_sweep b_spline
+    // going negative when the modp leading coef filter set lower.
+    // Similar change to the numchanges based test below.
+
+    if ((nroots = visible_roots(np, sseq, &atmin, &atmax)) <= 0)
     {
         return(0);
     }
@@ -1578,7 +1582,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     nroots = atmin - atmax;
 
-    if (nroots == 0)
+    if (nroots <= 0)
     {
         return(0);
     }
