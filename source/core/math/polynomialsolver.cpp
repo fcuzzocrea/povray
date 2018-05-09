@@ -140,7 +140,7 @@ static int sbisect (int np, const polynomial *sseq, DBL min, DBL max, int atmin,
 static int numchanges (int np, const polynomial *sseq, DBL a);
 static DBL polyeval (DBL x, int n, const DBL *Coeffs);
 static int buildsturm (int ord, polynomial *sseq);
-static int visible_roots (int np, const polynomial *sseq, int *atneg, int *atpos);
+static int visible_roots (int np, const polynomial *sseq);
 static int difficult_coeffs (int n, const DBL *x);
 
 
@@ -318,7 +318,7 @@ static int buildsturm(int ord, polynomial *sseq)
 *
 ******************************************************************************/
 
-static int visible_roots(int np, const polynomial *sseq, int *atzer, int  *atpos)
+static int visible_roots(int np, const polynomial *sseq)
 {
     int atposinf, atzero;
     const polynomial *s;
@@ -357,9 +357,6 @@ static int visible_roots(int np, const polynomial *sseq, int *atzer, int  *atpos
 
         lf = f;
     }
-
-    *atzer = atzero;
-    *atpos = atposinf;
 
     return(atzero - atposinf);
 }
@@ -1532,7 +1529,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     // going negative when the modp leading coef filter set lower.
     // Similar change to the numchanges based test below.
 
-    if ((nroots = visible_roots(np, sseq, &atmin, &atmax)) <= 0)
+    if ((nroots = visible_roots(np, sseq)) <= 0)
     {
         return(0);
     }
@@ -1753,7 +1750,7 @@ int Solve_Polynomial(int n, const DBL *c0, DBL *r, int sturm, DBL epsilon, Rende
 
             /* Test for difficult coeffs. */
 
-            if (difficult_coeffs(4, c))
+            if ((!sturm) && (difficult_coeffs(4, c)))
             {
                 sturm = true;
             }
