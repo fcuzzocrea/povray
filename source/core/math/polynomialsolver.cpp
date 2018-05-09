@@ -1542,21 +1542,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     min_value = 0.0;
     max_value = MAX_DISTANCE;
 
-    // Optionally use Augustin-Louis Cauchy's methods to determine an upper bound for max_value.
-
-    // This is the lower bound or bound including, for certain, only the first root but
-    // perhaps others.
-    if (0)
-    {
-        max_value   = fabs(Coeffs[order]);
-        Abs_Coeff_n = fabs(Coeffs[0]);
-        for (i = 1; i < order; i++)
-        {
-            max_value = max(fabs(Coeffs[i]),max_value);
-        }
-        max_value /= Abs_Coeff_n + 1;
-        max_value = min(max_value,MAX_DISTANCE);
-    }
+    // Use variation of Augustin-Louis Cauchy's methods to determine an upper bound for max_value.
 
     // Tighter upper bound found at:
     //    https://en.wikipedia.org/wiki/Properties_of_polynomial_roots#Other_bounds
@@ -1564,21 +1550,32 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     //    Cohen, Alan M. (2009). "Bounds for the roots of polynomial equations".
     //    Mathematical Gazette. 93: 87-88.
     // NOTE: Had to use > 1.0 in max_value2 calculation in practice...
-    if (1)
-    {
-        Abs_Coeff_n = fabs(Coeffs[0]); // Solve_Polynomial() dumps leading zeroes.
-        max_value2  = 1.1 + fabs(Coeffs[1]/Abs_Coeff_n);
-        max_value   = fabs(Coeffs[2]);
-        for (i = 3; i <= order; i++)
-        {
-            max_value = max(fabs(Coeffs[i]),max_value);
-        }
-        max_value /= Abs_Coeff_n + EPSILON;
-        max_value = min(max(max_value,max_value2),MAX_DISTANCE);
-    }
 
+    Abs_Coeff_n = fabs(Coeffs[0]); // Solve_Polynomial() dumps leading zeroes.
+    max_value2  = 1.1 + fabs(Coeffs[1]/Abs_Coeff_n);
+    max_value   = fabs(Coeffs[2]);
+    for (i = 3; i <= order; i++)
+    {
+        max_value = max(fabs(Coeffs[i]),max_value);
+    }
+    max_value /= Abs_Coeff_n + EPSILON;
+    max_value = min(max(max_value,max_value2),MAX_DISTANCE);
+
+    // NOTE: Found in practice roots occasionally, slightly outside upper bound...
+    // Perhaps related to how the sturm chain is pruned in modp(). Until sorted adding
+    // the following sanity check which restores a MAX_DISTANCE upper bound where
+    // root(s) exists above estimated upper bound.
+    atmin = numchanges(np, sseq, max_value);
+    atmax = numchanges(np, sseq, MAX_DISTANCE);
+    if ((atmin - atmax) != 0)
+    {
+        max_value = MAX_DISTANCE;
+    }
+    else
+    {
+        atmax = atmin;
+    }
     atmin = numchanges(np, sseq, min_value);
-    atmax = numchanges(np, sseq, max_value);
 
     nroots = atmin - atmax;
 
