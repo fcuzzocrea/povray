@@ -170,16 +170,24 @@ class Blob : public ObjectBase
         static void Transform_Blob_Element(Blob_Element *Element, const TRANSFORM *Trans);
     private:
         static void element_normal(Vector3d& Result, const Vector3d& P, const Blob_Element *Element);
-        static int intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Element *Element, DBL mindist, DBL *t0, DBL *t1, TraceThreadData *Thread);
-        static void insert_hit(const Blob_Element *Element, DBL t0, DBL t1, Blob_Interval_Struct *intervals, unsigned int *cnt);
-        int determine_influences(const Vector3d& P, const Vector3d& D, DBL mindist, Blob_Interval_Struct *intervals, TraceThreadData *Thread) const;
+        static int intersect_element(const Vector3d& P, const Vector3d& D,
+                                     const Blob_Element *Element, DBL *t0, DBL *t1,
+                                     TraceThreadData *Thread);
+        static void insert_hit(const Blob_Element *Element, DBL t0, DBL t1,
+                               Blob_Interval_Struct *intervals, unsigned int *cnt);
+        int determine_influences(const Vector3d& P, const Vector3d& D,
+                                 Blob_Interval_Struct *intervals, TraceThreadData *Thread) const;
         DBL calculate_field_value(const Vector3d& P, TraceThreadData *Thread) const;
         static DBL calculate_element_field(const Blob_Element *Element, const Vector3d& P);
 
-        static int intersect_cylinder(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax);
-        static int intersect_hemisphere(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax);
-        static int intersect_sphere(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax);
-        static int intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax);
+        static int intersect_cylinder(const Blob_Element *Element, const Vector3d& P,
+                                      const Vector3d& D, DBL *tmin, DBL *tmax);
+        static int intersect_hemisphere(const Blob_Element *Element, const Vector3d& P,
+                                        const Vector3d& D, DBL *tmin, DBL *tmax);
+        static int intersect_sphere(const Blob_Element *Element, const Vector3d& P,
+                                    const Vector3d& D, DBL *tmin, DBL *tmax);
+        static int intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P,
+                                       const Vector3d& D, DBL *tmin, DBL *tmax);
 
         static void get_element_bounding_sphere(const Blob_Element *Element, Vector3d& Center, DBL *Radius2);
         void build_bounding_hierarchy();

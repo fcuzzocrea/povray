@@ -119,11 +119,34 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/* Minimal intersection depth for a valid intersection. */
-const DBL DEPTH_TOLERANCE = 1.0e-2;
+/// @def DEPTH_TOLERANCE
+/// Minimum returned intersection depth for a valid intersection.
+///
+/// @note
+///     Value for @ref DEPTH_TOLERANCE was since v1.0 set to 1.0e-2. Further the
+///     value was used for both ling used for the minimum returned and as a mindist
+///     in all of the determine_influences()'s intersect_<thing> functions. The
+///     latter probably done initially to help the initial solve_quartic() function
+///     though using such a large value to determine when to add and remove
+///     sub-element influences caused artifacts. In 3.7 when the subsurface (SSLT)
+///     feature was added a special conditional existed which set both values to
+///     0.0. Currently a 0.0 value is used for all but the returned intersection
+///     where @ref MIN_ISECT_DEPTH is now used. In testing all worked with 0.0, but
+///     there is a performance hit to returning all >0.0 intersections. For example,
+///     internal refelections at distances which must be ignored in downstream code.
+///
+const DBL DEPTH_TOLERANCE = MIN_ISECT_DEPTH;
 
-/* Tolerance for inside test. */
-const DBL INSIDE_TOLERANCE = 1.0e-6;
+/// @def INSIDE_TOLERANCE
+/// Density tolerance for inside test.
+///
+/// @note
+///     Value for @ref INSIDE_TOLERANCE was since v1.0 set to 1.0e-6 which is a good
+///     value if running single floats. With double floats a value of 1e-15 is better.
+///     This is an offset to the inside of the 0.0 density surface after the blob
+///     threshold is subtracted. Now using std::numeric_limits to set.
+///
+const DBL INSIDE_TOLERANCE = 1/std::numeric_limits<DBL>::digits10;
 
 /* Ray enters/exits a component. */
 const int ENTERING = 0;
@@ -239,7 +262,6 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
     DBL newcoeffs[5], dk[5];
     DBL max_bound;
     DBL l, w;
-    DBL depthTolerance = (ray.IsSubsurfaceRay()? 0 : DEPTH_TOLERANCE);
 
     Thread->Stats()[Ray_Blob_Tests]++;
 
@@ -263,7 +285,7 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 
     /* Get the intervals along the ray where each component has an effect. */
     Blob_Interval_Struct* intervals = Thread->Blob_Intervals;
-    if ((cnt = determine_influences(P, D, depthTolerance, intervals, Thread)) == 0)
+    if ((cnt = determine_influences(P, D, intervals, Thread)) == 0)
     {
         /* Ray doesn't hit any of the component elements. */
         return (false);
@@ -528,7 +550,7 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 
                 dist = (dist * max_bound + start_dist) / len;
 
-                if ((dist > depthTolerance) && (dist < MAX_DISTANCE))
+                if ((dist > DEPTH_TOLERANCE) && (dist < MAX_DISTANCE))
                 {
                     IPoint = ray.Evaluate(dist);
 
@@ -600,7 +622,8 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 *
 ******************************************************************************/
 
-void Blob::insert_hit(const Blob_Element *Element, DBL t0, DBL t1, Blob_Interval_Struct *intervals, unsigned int *cnt)
+void Blob::insert_hit(const Blob_Element *Element, DBL t0, DBL t1,
+                      Blob_Interval_Struct *intervals, unsigned int *cnt)
 {
     unsigned int k;
 
@@ -678,7 +701,6 @@ void Blob::insert_hit(const Blob_Element *Element, DBL t0, DBL t1, Blob_Interval
 *
 *   Element    - Pointer to element structure
 *   P, D       - Ray = P + t * D
-*   mindist    - Min. valid distance
 *
 * OUTPUT
 *
@@ -700,7 +722,8 @@ void Blob::insert_hit(const Blob_Element *Element, DBL t0, DBL t1, Blob_Interval
 *
 ******************************************************************************/
 
-int Blob::intersect_cylinder(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax)
+int Blob::intersect_cylinder(const Blob_Element *Element, const Vector3d& P,
+                             const Vector3d& D, DBL *tmin, DBL *tmax)
 {
     DBL a, b, c, d, t, u, v, w, len;
     Vector3d PP, DD;
@@ -786,8 +809,8 @@ int Blob::intersect_cylinder(const Blob_Element *Element, const Vector3d& P, con
     *tmin /= len;
     *tmax /= len;
 
-    if (*tmin < mindist) { *tmin = 0.0; }
-    if (*tmax < mindist) { *tmax = 0.0; }
+    if (*tmin < 0.0) { *tmin = 0.0; }
+    if (*tmax < 0.0) { *tmax = 0.0; }
 
     if (*tmin >= *tmax)
     {
@@ -809,7 +832,6 @@ int Blob::intersect_cylinder(const Blob_Element *Element, const Vector3d& P, con
 *
 *   Element    - Pointer to element structure
 *   P, D       - Ray = P + t * D
-*   mindist    - Min. valid distance
 *
 * OUTPUT
 *
@@ -831,7 +853,8 @@ int Blob::intersect_cylinder(const Blob_Element *Element, const Vector3d& P, con
 *
 ******************************************************************************/
 
-int Blob::intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax)
+int Blob::intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P,
+                              const Vector3d& D, DBL *tmin, DBL *tmax)
 {
     DBL b, d, t, len;
     Vector3d V1, PP, DD;
@@ -855,8 +878,8 @@ int Blob::intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P, co
 
     d = sqrt(d);
 
-    *tmax = ( - b + d) / len;  if (*tmax < mindist) { *tmax = 0.0; }
-    *tmin = ( - b - d) / len;  if (*tmin < mindist) { *tmin = 0.0; }
+    *tmax = ( - b + d) / len;  if (*tmax < 0.0) { *tmax = 0.0; }
+    *tmin = ( - b - d) / len;  if (*tmin < 0.0) { *tmin = 0.0; }
 
     if (*tmax == *tmin)
     {
@@ -885,7 +908,6 @@ int Blob::intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P, co
 *
 *   Element    - Pointer to element structure
 *   P, D       - Ray = P + t * D
-*   mindist    - Min. valid distance
 *
 * OUTPUT
 *
@@ -907,7 +929,8 @@ int Blob::intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P, co
 *
 ******************************************************************************/
 
-int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax)
+int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P,
+                               const Vector3d& D, DBL *tmin, DBL *tmax)
 {
     DBL b, d, t, z1, z2, len;
     Vector3d PP, DD;
@@ -972,13 +995,13 @@ int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P, c
         {
             /* Ray is crossing the plane from inside to outside. */
 
-            *tmin = (t < mindist) ? 0.0 : t;
+            *tmin = (t < 0.0) ? 0.0 : t;
         }
         else
         {
             /* Ray is crossing the plane from outside to inside. */
 
-            *tmax = (t < mindist) ? 0.0 : t;
+            *tmax = (t < 0.0) ? 0.0 : t;
         }
 
         *tmin /= len;
@@ -1040,13 +1063,13 @@ int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P, c
         {
             /* Ray is crossing the plane from inside to outside. */
 
-            *tmin = (t < mindist) ? 0.0 : t;
+            *tmin = (t < 0.0) ? 0.0 : t;
         }
         else
         {
             /* Ray is crossing the plane from outside to inside. */
 
-            *tmax = (t < mindist) ? 0.0 : t;
+            *tmax = (t < 0.0) ? 0.0 : t;
         }
 
         *tmin /= len;
@@ -1068,7 +1091,6 @@ int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P, c
 *
 *   Element    - Pointer to element structure
 *   P, D       - Ray = P + t * D
-*   mindist    - Min. valid distance
 *
 * OUTPUT
 *
@@ -1090,7 +1112,8 @@ int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P, c
 *
 ******************************************************************************/
 
-int Blob::intersect_sphere(const Blob_Element *Element, const Vector3d& P, const Vector3d& D, DBL mindist, DBL *tmin, DBL *tmax)
+int Blob::intersect_sphere(const Blob_Element *Element, const Vector3d& P,
+                           const Vector3d& D, DBL *tmin, DBL *tmax)
 {
     DBL b, d, t;
     Vector3d V1;
@@ -1108,8 +1131,8 @@ int Blob::intersect_sphere(const Blob_Element *Element, const Vector3d& P, const
 
     d = sqrt(d);
 
-    *tmax = - b + d;  if (*tmax < mindist) { *tmax = 0.0; }
-    *tmin = - b - d;  if (*tmin < mindist) { *tmin = 0.0; }
+    *tmax = - b + d;  if (*tmax < 0.0) { *tmax = 0.0; }
+    *tmin = - b - d;  if (*tmin < 0.0) { *tmin = 0.0; }
 
     if (*tmax == *tmin)
     {
@@ -1138,7 +1161,6 @@ int Blob::intersect_sphere(const Blob_Element *Element, const Vector3d& P, const
 *
 *   P, D       - Ray = P + t * D
 *   Element    - Pointer to element structure
-*   mindist    - Min. valid distance
 *
 * OUTPUT
 *
@@ -1160,7 +1182,8 @@ int Blob::intersect_sphere(const Blob_Element *Element, const Vector3d& P, const
 *
 ******************************************************************************/
 
-int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Element *Element, DBL mindist, DBL *tmin, DBL *tmax, TraceThreadData *Thread)
+int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Element *Element,
+                            DBL *tmin, DBL *tmax, TraceThreadData *Thread)
 {
 #ifdef BLOB_EXTRA_STATS
     Thread->Stats()[Blob_Element_Tests]++;
@@ -1173,7 +1196,7 @@ int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Ele
     {
         case BLOB_SPHERE:
 
-            if (!intersect_sphere(Element, P, D, mindist, tmin, tmax))
+            if (!intersect_sphere(Element, P, D, tmin, tmax))
             {
                 return (false);
             }
@@ -1182,7 +1205,7 @@ int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Ele
 
         case BLOB_ELLIPSOID:
 
-            if (!intersect_ellipsoid(Element, P, D, mindist, tmin, tmax))
+            if (!intersect_ellipsoid(Element, P, D, tmin, tmax))
             {
                 return (false);
             }
@@ -1192,7 +1215,7 @@ int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Ele
         case BLOB_BASE_HEMISPHERE:
         case BLOB_APEX_HEMISPHERE:
 
-            if (!intersect_hemisphere(Element, P, D, mindist, tmin, tmax))
+            if (!intersect_hemisphere(Element, P, D, tmin, tmax))
             {
                 return (false);
             }
@@ -1201,7 +1224,7 @@ int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Ele
 
         case BLOB_CYLINDER:
 
-            if (!intersect_cylinder(Element, P, D, mindist, tmin, tmax))
+            if (!intersect_cylinder(Element, P, D, tmin, tmax))
             {
                 return (false);
             }
@@ -1228,7 +1251,6 @@ int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Ele
 *
 *   P, D       - Ray = P + t * D
 *   Blob       - Pointer to blob structure
-*   mindist    - Min. valid distance
 *
 * OUTPUT
 *
@@ -1253,7 +1275,8 @@ int Blob::intersect_element(const Vector3d& P, const Vector3d& D, const Blob_Ele
 *
 ******************************************************************************/
 
-int Blob::determine_influences(const Vector3d& P, const Vector3d& D, DBL mindist, Blob_Interval_Struct *intervals, TraceThreadData *Thread) const
+int Blob::determine_influences(const Vector3d& P, const Vector3d& D,
+                               Blob_Interval_Struct *intervals, TraceThreadData *Thread) const
 {
     unsigned int cnt, size;
     DBL b, t, t0, t1;
@@ -1269,7 +1292,7 @@ int Blob::determine_influences(const Vector3d& P, const Vector3d& D, DBL mindist
 
         for (vector<Blob_Element>::iterator i = Data->Entry.begin(); i != Data->Entry.end(); ++i)
         {
-            if (intersect_element(P, D, &(*i), mindist, &t0, &t1, Thread))
+            if (intersect_element(P, D, &(*i), &t0, &t1, Thread))
             {
                 insert_hit(&(*i), t0, t1, intervals, &cnt);
             }
@@ -1293,7 +1316,7 @@ int Blob::determine_influences(const Vector3d& P, const Vector3d& D, DBL mindist
             {
                 /* Test element. */
 
-                if (intersect_element(P, D, reinterpret_cast<Blob_Element *>(Tree->Node), mindist, &t0, &t1, Thread))
+                if (intersect_element(P, D, reinterpret_cast<Blob_Element *>(Tree->Node), &t0, &t1, Thread))
                 {
                     insert_hit(reinterpret_cast<Blob_Element *>(Tree->Node), t0, t1, intervals, &cnt);
                 }
