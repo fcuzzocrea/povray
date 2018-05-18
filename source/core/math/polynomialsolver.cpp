@@ -50,69 +50,86 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/*                  WARNING     WARNING    WARNING
+/// @def FUDGE_FACTOR2
+/// Value defining how close the quartic equation is to being a square
+/// of a quadratic.
+///
+/// @note
+///     The closer this can get to zero before roots disappear, the less the chance
+///     you will get spurious roots.
+///
+const DBL FUDGE_FACTOR2 = -1.0e-5;
 
-   The following three constants have been defined so that quartic equations
-   will properly render on fpu/compiler combinations that only have 64 bit
-   IEEE precision.  Do not arbitrarily change any of these values.
+/// @def FUDGE_FACTOR3
+/// Similar to @ref FUDGE_FACTOR2 at a later stage of the algebraic solver.
+///
+/// @note
+///
+///     @ref FUDGE_FACTOR2 and @ref FUDGE_FACTOR3 have been defined so that quartic
+///     equations will properly render on fpu/compiler combinations that only have
+///     64 bit IEEE precision. Do not arbitrarily change any of these values.
+///
+///     If you have a machine with a proper fpu/compiler combo - like a Mac with a
+///     68881, then use the native floating format (96 bits) and tune the values for
+///     a little less tolerance: something like: factor2 = -1.0e-7, factor3 =
+///     1.0e-10. Twenty five years later the reality is still double accuracy
+///     due use of fastmath (not IEEE compliant) compiling, use of SSE Fused
+///     Multiply Add instructions, etc.
+///
+const DBL FUDGE_FACTOR3 = 1.0e-7;
 
-   If you have a machine with a proper fpu/compiler combo - like a Mac with
-   a 68881, then use the native floating format (96 bits) and tune the
-   values for a little less tolerance: something like: factor1 = 1.0e15,
-   factor2 = -1.0e-7, factor3 = 1.0e-10.
-
-   The meaning of the three constants are:
-      factor1 - the magnitude of difference between coefficients in a
-                quartic equation at which the Sturmian root solver will
-                kick in.  The Sturm solver is quite a bit slower than
-                the algebraic solver, so the bigger this is, the faster
-                the root solving will go.  The algebraic solver is less
-                accurate so the bigger this is, the more likely you will
-                get bad roots.
-
-      factor2 - Tolerance value that defines how close the quartic equation
-                is to being a square of a quadratic.  The closer this can
-                get to zero before roots disappear, the less the chance
-                you will get spurious roots.
-
-      factor3 - Similar to factor2 at a later stage of the algebraic solver.
-*/
-
-#ifndef FUDGE_FACTOR1
-    #define FUDGE_FACTOR1 1.0e12
-#endif
-#ifndef FUDGE_FACTOR2
-    #define FUDGE_FACTOR2 -1.0e-5
-#endif
-#ifndef FUDGE_FACTOR3
-    #define FUDGE_FACTOR3 1.0e-7
-#endif
-
-/* Constants. */
+/// @def TWO_M_PI_3
+/// Value used in solve_cubic() equal to 2.0 * pi / 3.0.
+///
 const DBL TWO_M_PI_3  = 2.0943951023931954923084;
+
+/// @def FOUR_M_PI_3
+/// Value used in solve_cubic() equal to 4.0 * pi / 3.0.
+///
 const DBL FOUR_M_PI_3 = 4.1887902047863909846168;
 
-/* Max number of iterations. */
+/// @def MAX_ITERATIONS
+/// Max number of polysolve sturm chain based bisections.
+///
+/// @note
+///     regula_falsa() uses twice this value internally as it can be
+///     quite slow to converge in the worst case.
+///
 const int MAX_ITERATIONS = 65;
 
-// NOTE: Value below which multiple roots ignored. Rays near tangent to surface
-// create extremely close roots and instability in sturm chain sign change
-// results from numchanges(). Also where the diagonal line of missed roots in
-// formed polynomials appears due root collapsing toward each other in
-// directions parallel to the ray.
+/// @def SBISECT_MULT_ROOT_THRESHOLD
+/// Value below which multiple roots ignored in sturm chained based bisection
+/// and a sigle root at the middle of the current interval is returned.
+///
+/// @note
+///     Rays near tangent to surface create extremely close roots and instability
+///     in sturm chain sign change results from numchanges(). Threshold often
+///     tripped in sphere_sweep polynomials where the roots frequently collapse
+///     inward due equation set up.
+///
 const DBL SBISECT_MULT_ROOT_THRESHOLD = 1e-6;
 
-// NOTE: max_value - min_value threshold below which regula_falsa function is
-// tried when there is a single root. Single roots happen often. Rays continued
-// by transparency or internal reflection for example will have just one root.
-// Idea is to delay use of regula_falsa method until the ray domain is small.
+/// @def REGULA_FALSA_THRESHOLD
+/// Threshold below which regula_falsa function is tried when there is a single root.
+///
+/// @note
+///     Ray interval max_value - min_value threshold below which regula_falsa
+///     function is tried when there is a single root. Single roots happen often.
+///     Rays continued by transparency or internal reflection for example will have
+///     just one root. Idea is to delay use of regula_falsa method until the ray
+///     domain is small given regula-falsi method can converge very, very slowly
+///     with common enough ray-surface equations.
+///
 const DBL REGULA_FALSA_THRESHOLD = 1.0;
+
+/// @def RELERROR
+/// Smallest relative error along the ray when using the polysolve(), sturm
+/// chain bisection / regula-falsi method.
+///
+const DBL RELERROR = 1.0e-12;
 
 /* A coefficient smaller than SMALL_ENOUGH is considered to be zero (0.0). */
 const DBL SMALL_ENOUGH = 1.0e-10;
-
-/* Smallest relative error we want. */
-const DBL RELERROR = 1.0e-12;
 
 
 /*****************************************************************************
@@ -141,7 +158,6 @@ static int numchanges (int np, const polynomial *sseq, DBL a);
 static DBL polyeval (DBL x, int n, const DBL *Coeffs);
 static int buildsturm (int ord, polynomial *sseq);
 static int visible_roots (int np, const polynomial *sseq);
-static int difficult_coeffs (int n, const DBL *x);
 
 
 /*****************************************************************************
@@ -728,7 +744,7 @@ static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *va
 
                 break;
             }
-            else if (fabs(fx) < (RELERROR/1000))
+            else if (fabs(fx) < (1/std::numeric_limits<DBL>::digits10))
             {
                 *val = x;
 
@@ -1006,138 +1022,6 @@ static int solve_cubic(const DBL *x, DBL *y)
     }
 }
 
-#ifdef USE_NEW_DIFFICULT_COEFFS
-
-/*****************************************************************************
-*
-* FUNCTION
-*
-*   difficult_coeffs
-*
-* INPUT
-*
-* OUTPUT
-*
-* RETURNS
-*
-* AUTHOR
-*
-*   Alexander Enzmann
-*
-* DESCRIPTION
-*
-*   Test to see if any coeffs are more than 6 orders of magnitude
-*   larger than the smallest.
-*
-* CHANGES
-*
-*   -
-*
-******************************************************************************/
-
-static int difficult_coeffs(int n, DBL *x)
-{
-    int i, flag = 0;
-    DBL t, biggest;
-
-    biggest = fabs(x[0]);
-
-    for (i = 1; i <= n; i++)
-    {
-        t = fabs(x[i]);
-
-        if (t > biggest)
-        {
-            biggest = t;
-        }
-    }
-
-    /* Everything is zero no sense in doing any more */
-
-    if (biggest == 0.0)
-    {
-        return(0);
-    }
-
-    for (i = 0; i <= n; i++)
-    {
-        if (x[i] != 0.0)
-        {
-            if (fabs(biggest / x[i]) > FUDGE_FACTOR1)
-            {
-                x[i] = 0.0;
-                flag = 1;
-            }
-        }
-    }
-
-    return(flag);
-}
-#else
-/*****************************************************************************
-*
-* FUNCTION
-*
-*   difficult_coeffs
-*
-* INPUT
-*
-* OUTPUT
-*
-* RETURNS
-*
-* AUTHOR
-*
-*   Alexander Enzmann
-*
-* DESCRIPTION
-*
-*   Test to see if any coeffs are more than 6 orders of magnitude
-*   larger than the smallest (function from POV-Ray v1.0) [DB 8/94].
-*
-* CHANGES
-*
-*   -
-*
-******************************************************************************/
-
-static int difficult_coeffs(int n, const DBL *x)
-{
-    int i;
-    DBL biggest;
-
-    biggest = 0.0;
-
-    for (i = 0; i <= n; i++)
-    {
-        if (fabs(x[i]) > biggest)
-        {
-            biggest = x[i];
-        }
-    }
-
-    /* Everything is zero no sense in doing any more */
-
-    if (biggest == 0.0)
-    {
-        return(0);
-    }
-
-    for (i = 0; i <= n; i++)
-    {
-        if (x[i] != 0.0)
-        {
-            if (fabs(biggest / x[i]) > FUDGE_FACTOR1)
-            {
-                return(1);
-            }
-        }
-    }
-
-    return(0);
-}
-
-#endif
 
 #ifdef TEST_SOLVER
 /*****************************************************************************
@@ -1746,13 +1630,6 @@ int Solve_Polynomial(int n, const DBL *c0, DBL *r, int sturm, DBL epsilon, Rende
 
                     break;
                 }
-            }
-
-            /* Test for difficult coeffs. */
-
-            if ((!sturm) && (difficult_coeffs(4, c)))
-            {
-                sturm = true;
             }
 
             /* Solve quartic polynomial. */
