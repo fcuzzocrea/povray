@@ -744,7 +744,7 @@ static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *va
 
                 break;
             }
-            else if (fabs(fx) < (1/std::numeric_limits<DBL>::digits10))
+            else if (fabs(fx) < ((DBL)1.0/pow((DBL)10.0,std::numeric_limits<DBL>::digits10)))
             {
                 *val = x;
 

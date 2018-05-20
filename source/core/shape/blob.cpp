@@ -143,10 +143,10 @@ const DBL DEPTH_TOLERANCE = MIN_ISECT_DEPTH;
 /// @note
 ///     Value for @ref INSIDE_TOLERANCE was since v1.0 set to 1.0e-6 which is a good
 ///     value if running single floats. With double floats a value of 1e-15 is better.
-///     This is an offset to the inside of the 0.0 density surface after the blob
+///     This is an offset to the outside of the 0.0 density surface after the blob
 ///     threshold is subtracted. Now using std::numeric_limits to set.
 ///
-const DBL INSIDE_TOLERANCE = 1/std::numeric_limits<DBL>::digits10;
+const DBL INSIDE_TOLERANCE = (DBL)1.0/pow((DBL)10.0,std::numeric_limits<DBL>::digits10);
 
 /* Ray enters/exits a component. */
 const int ENTERING = 0;
