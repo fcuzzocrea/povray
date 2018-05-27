@@ -41,7 +41,7 @@
 #include "syspovconfigbase.h"
 
 #include <cstdint>
-
+#include <cfloat>
 #include <limits>
 
 #include <boost/version.hpp>
@@ -113,6 +113,44 @@
 #ifndef POV_CPP11_SUPPORTED
     #define POV_CPP11_SUPPORTED (__cplusplus >= 201103L)
 #endif
+
+/// @}
+///
+//******************************************************************************
+///
+/// @name C++11 Constant Expression Support
+///
+/// The following macros and constant expression (constexpr) functions enable the set up of
+/// compile time typed contants.
+///
+/// References in addtion to the C++11 standard itself:
+///     * [sac10-constexpr.pdf](http://www.stroustrup.com/sac10-constexpr.pdf)
+///     * [n2235.pdf](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2235.pdf)
+///
+/// @{
+
+/// @def CX_XSTR(A)
+/// Macro converts preprocessor macro string to a contant string.
+///
+/// @note
+///    Itself using an macro internale macro called CX_STR(A).
+///
+#define CX_XSTR(A) CX_STR(A)
+#define CX_STR(A) #A
+
+/// @def CX_STRCMP(A,B)
+/// constexpr function comparing two strings in compile time constant fashion.
+///
+/// @param[in] A First string.
+/// @param[in] B Second string.
+/// @return Integer 0 on matching strings and non zero integer otherwise.
+///
+constexpr int CX_STRCMP(char const* lhs, char const* rhs)
+{
+    return (('\0' == lhs[0]) && ('\0' == rhs[0])) ? 0
+        :  (lhs[0] != rhs[0]) ? (lhs[0] - rhs[0])
+        : CX_STRCMP( lhs+1, rhs+1 );
+}
 
 /// @}
 ///
@@ -320,6 +358,104 @@
 #ifndef SNGL
     #define SNGL float
 #endif
+
+/// @def PRECISE_FLOAT
+/// The foating-point data type to use within the polysolve() solver.
+///
+/// Normally PRECISE_FLOAT will be set to @ref DBL. However, 'long double' is a
+/// precision guaranteed by the C++ standard to exist and to be at least of
+/// 'double' size. In practice, most environments provide 80bits of extended
+/// accuracy in a hardware backed way and some environments provide more bits.
+///
+/// Further, particular compilers and environments may offer other float
+/// data types. Recent GNU g++ compilers, for example, offer the __float128
+/// data type which coorresponds to the IEEE 754-2008 binary128 type.
+///
+/// @note
+///     The setting is used to set internal 'constextr int PRECISE_DIG' and
+///     'constexpr DBL PRECISE_EPSILON' typed values.
+///
+/// @note
+///     If @ref PRECISE_FLOAT is set to 'float', 'double' or 'long double', the C++11 standard
+///     itself defines via cfloat include the macros: FLT_DIG, DBL_DIG, LDBL_DIG, FLT_EPSILON,
+///     DBL_EPSILON, LDBL_EPSILON. These macro values are used to set PRECISE_DIG and
+///     PRECISE_EPSILON polysolve() values via the C++ constexpr mechanism.
+///
+/// @note
+///     Users access the polysolve() solver via the 'sturm' keyword though it's always
+///     used for polynomials of order 5 or more.
+///
+/// @attention
+///     polysolve() math with data types not run in hardware or with awkward bit sizes with
+///     respect to the running computer's data bus size will run substantially slower.
+///
+#ifndef PRECISE_FLOAT
+    #define PRECISE_FLOAT DBL
+#endif
+
+/// @def PRECISE_FABS
+/// The floating point absolute value function name to use with @ref PRECISE_FLOAT.
+///
+/// Where @ref PRECISE_FLOAT a C++11 standard floating point type this should be
+/// the default fabs. When using, for example, __float128 with GNU g++ in a supported 64 bit
+/// environment the value would defined to be __builtin_fabsq - as that function is a built-in
+/// for 64 bit compiles. It might be set to fabsq if using GNU g++'s quadmath library.
+///
+/// @note
+///    At present PRECISE_FABS, like @ref PRECISE_FLOAT, applies only within polysolve().
+///
+#ifndef PRECISE_FABS
+    #define PRECISE_FABS fabs
+#endif
+
+/// @def PRECISE_DIGITS
+/// Base 10 digits where @ref PRECISE_FLOAT type not a C++11 floating point standard.
+///
+/// Defaults to an IEEE 754-2008 binary128 value of 33 with the expectation this the most likely
+/// non-standard @ref PRECISE_FLOAT usage, but it can be explicitly set as needed.
+///
+#ifndef PRECISE_DIGITS
+    #define PRECISE_DIGITS 33
+#endif
+
+/// @def PRECISE_EPSLN
+/// Best epsilon step where @ref PRECISE_FLOAT type not a C++11 floating point standard.
+///
+/// Defaults to an IEEE 754-2008 binary128 value of 1.9259e-34 with the expectation this the
+/// most likely non-standard @ref PRECISE_FLOAT type, but it can be explicitly set as needed.
+///
+#ifndef PRECISE_EPSLN
+    #define PRECISE_EPSLN 1.92592994438724e-34
+#endif
+
+/// @def PRECISE_DIG
+/// Internal 'constexpr int' value for maximum decimal digits for given @ref PRECISE_FLOAT.
+///
+/// Set to C+11 standard value where defined and to @ref PRECISE_DIGITS otherwise.
+///
+constexpr int PRECISE_FLT  = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "float");
+constexpr int PRECISE_DBL  = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "double");
+constexpr int PRECISE_LDBL = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "long double");
+
+constexpr int PRECISE_DIG  = PRECISE_FLT  ?
+                             PRECISE_DBL  ?
+                             PRECISE_LDBL ? PRECISE_DIGITS
+                             : LDBL_DIG
+                             : DBL_DIG
+                             : FLT_DIG;
+
+/// @def PRECISE_EPSILON
+/// Internal 'constexpr DBL' value for minimum epsilon step for given @ref PRECISE_FLOAT.
+///
+/// Set to C+11 standard value where defined and to @ref PRECISE_EPSLN otherwise.
+///
+
+constexpr DBL PRECISE_EPSILON = PRECISE_FLT  ?
+                                PRECISE_DBL  ?
+                                PRECISE_LDBL ? PRECISE_EPSLN
+                                : LDBL_EPSILON
+                                : DBL_EPSILON
+                                : FLT_EPSILON;
 
 /// @}
 ///

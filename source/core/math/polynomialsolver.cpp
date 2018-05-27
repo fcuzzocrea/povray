@@ -52,7 +52,7 @@ namespace pov
 
 /// @def FUDGE_FACTOR2
 /// Value defining how close the quartic equation is to being a square
-/// of a quadratic.
+/// of a quadratic in the OLD unused solve_quartic version kept for testing.
 ///
 /// @note
 ///     The closer this can get to zero before roots disappear, the less the chance
@@ -61,7 +61,8 @@ namespace pov
 const DBL FUDGE_FACTOR2 = -1.0e-5;
 
 /// @def FUDGE_FACTOR3
-/// Similar to @ref FUDGE_FACTOR2 at a later stage of the algebraic solver.
+/// Similar to @ref FUDGE_FACTOR2 at a later stage of the algebraic solver. Also
+/// long used only in the old kept for testing version of solve_quartic().
 ///
 /// @note
 ///
@@ -107,7 +108,7 @@ const int MAX_ITERATIONS = 65;
 ///     tripped in sphere_sweep polynomials where the roots frequently collapse
 ///     inward due equation set up.
 ///
-const DBL SBISECT_MULT_ROOT_THRESHOLD = 1e-6;
+const PRECISE_FLOAT SBISECT_MULT_ROOT_THRESHOLD = (PRECISE_FLOAT)1e-6;
 
 /// @def REGULA_FALSA_THRESHOLD
 /// Threshold below which regula_falsa function is tried when there is a single root.
@@ -120,17 +121,27 @@ const DBL SBISECT_MULT_ROOT_THRESHOLD = 1e-6;
 ///     domain is small given regula-falsi method can converge very, very slowly
 ///     with common enough ray-surface equations.
 ///
-const DBL REGULA_FALSA_THRESHOLD = 1.0;
+/// @todo
+///     Initial setting 1.0 can likely be tuned for better performance trading off
+///     bisection against regula_falsa.
+///
+const PRECISE_FLOAT REGULA_FALSA_THRESHOLD = (PRECISE_FLOAT)1.0;
 
 /// @def RELERROR
 /// Smallest relative error along the ray when using the polysolve(), sturm
 /// chain bisection / regula-falsi method.
 ///
-const DBL RELERROR = 1.0e-12;
+const PRECISE_FLOAT RELERROR = (PRECISE_FLOAT)1.0e-12;
 
-/* A coefficient smaller than SMALL_ENOUGH is considered to be zero (0.0). */
+/// @def SMALL_ENOUGH
+/// Used to filter determinant value in solve_quadratic() in an unusual way.
+/// Used in solve_quartic() to filter values ahead of the trailing quadratics.
+///
+/// @todo
+///     Suspect value is larger than it should really be and very likely should
+///     not be used at all in solve_quadratic() as it is.
+///
 const DBL SMALL_ENOUGH = 1.0e-10;
-
 
 /*****************************************************************************
 * Local typedefs
@@ -139,7 +150,7 @@ const DBL SMALL_ENOUGH = 1.0e-10;
 struct polynomial
 {
     int ord;
-    DBL coef[MAX_ORDER+1];
+    PRECISE_FLOAT coef[MAX_ORDER+1];
 };
 
 
@@ -152,10 +163,12 @@ static int solve_cubic (const DBL *x, DBL *y);
 static int solve_quartic (const DBL *x, DBL *y);
 static int polysolve (int order, const DBL *Coeffs, DBL *roots);
 static int modp (const polynomial *u, const polynomial *v, polynomial *r);
-static bool regula_falsa (const int order, const DBL *coef, DBL a, DBL b, DBL *val);
-static int sbisect (int np, const polynomial *sseq, DBL min, DBL max, int atmin, int atmax, DBL *roots);
-static int numchanges (int np, const polynomial *sseq, DBL a);
-static DBL polyeval (DBL x, int n, const DBL *Coeffs);
+static bool regula_falsa (const int order, const PRECISE_FLOAT *coef, PRECISE_FLOAT a,
+                          PRECISE_FLOAT b, DBL *val);
+static int sbisect (int np, const polynomial *sseq, PRECISE_FLOAT min, PRECISE_FLOAT max,
+                    int atmin, int atmax, DBL *roots);
+static int numchanges (int np, const polynomial *sseq, PRECISE_FLOAT a);
+static PRECISE_FLOAT polyeval (PRECISE_FLOAT x, int n, const PRECISE_FLOAT *Coeffs);
 static int buildsturm (int ord, polynomial *sseq);
 static int visible_roots (int np, const polynomial *sseq);
 
@@ -223,9 +236,19 @@ static int modp(const polynomial *u, const polynomial *v, polynomial *r)
 
     k = v->ord - 1;
 
-    while (k >= 0 && fabs(r->coef[k]) < SMALL_ENOUGH)
+    // NOTE: Using DBL here to avoid need for powq() or a quad/128 bit version of pow().
+    // Compilers like gnu g++ include some built in 128 bit support on 64 bit systems
+    // without an additional library, but it doesn't include powq(). Reality is the
+    // leading coefficient pruning value here need not be exact, but close to minimum
+    // 'good' zero for floating point type used for sturm chain set up to be valid. If an
+    // incoming polynomial is well behaved - no near zero values during polynomial division -
+    // much smaller values can be used, but knowing this a priori impossible. Too small
+    // a value can lead to false roots.
+    //
+    while (k >= 0 &&
+           PRECISE_FABS(r->coef[k]) < (PRECISE_FLOAT)((DBL)1.0/pow((DBL)10.0,PRECISE_DIG)))
     {
-        r->coef[k] = 0.0;
+        r->coef[k] = (PRECISE_FLOAT)0.0;
 
         k--;
     }
@@ -266,8 +289,8 @@ static int modp(const polynomial *u, const polynomial *v, polynomial *r)
 static int buildsturm(int ord, polynomial *sseq)
 {
     int i;
-    DBL f;
-    DBL *fp, *fc;
+    PRECISE_FLOAT f;
+    PRECISE_FLOAT *fp, *fc;
     polynomial *sp;
 
     sseq[0].ord = ord;
@@ -275,7 +298,7 @@ static int buildsturm(int ord, polynomial *sseq)
 
     /* calculate the derivative and normalize the leading coefficient. */
 
-    f = fabs(sseq[0].coef[ord] * ord);
+    f = PRECISE_FABS(sseq[0].coef[ord] * ord);
 
     fp = sseq[1].coef;
     fc = sseq[0].coef + 1;
@@ -291,7 +314,7 @@ static int buildsturm(int ord, polynomial *sseq)
     {
         /* reverse the sign and normalize */
 
-        f = -fabs(sp->coef[sp->ord]);
+        f = -PRECISE_FABS(sp->coef[sp->ord]);
 
         for (fp = &sp->coef[sp->ord]; fp >= sp->coef; fp--)
         {
@@ -338,7 +361,7 @@ static int visible_roots(int np, const polynomial *sseq)
 {
     int atposinf, atzero;
     const polynomial *s;
-    DBL f, lf;
+    PRECISE_FLOAT f, lf;
 
     atposinf = atzero = 0;
 
@@ -350,7 +373,7 @@ static int visible_roots(int np, const polynomial *sseq)
     {
         f = s->coef[s->ord];
 
-        if (lf == 0.0 || lf * f < 0)
+        if (lf == (PRECISE_FLOAT)0.0 || lf * f < (PRECISE_FLOAT)0.0)
         {
             atposinf++;
         }
@@ -366,7 +389,7 @@ static int visible_roots(int np, const polynomial *sseq)
     {
         f = s->coef[0];
 
-        if (lf == 0.0 || lf * f < 0)
+        if (lf == (PRECISE_FLOAT)0.0 || lf * f < (PRECISE_FLOAT)0.0)
         {
             atzero++;
         }
@@ -406,12 +429,11 @@ static int visible_roots(int np, const polynomial *sseq)
 *
 ******************************************************************************/
 
-static int numchanges(int np, const polynomial *sseq, DBL a)
+static int numchanges(int np, const polynomial *sseq, PRECISE_FLOAT a)
 {
-    int changes;
-    DBL f, lf;
+    int changes = 0;
+    PRECISE_FLOAT f, lf;
     const polynomial *s;
-    changes = 0;
 
     lf = polyeval(a, sseq[0].ord, sseq[0].coef);
 
@@ -419,7 +441,7 @@ static int numchanges(int np, const polynomial *sseq, DBL a)
     {
         f = polyeval(a, s->ord, s->coef);
 
-        if (lf == 0.0 || lf * f < 0)
+        if (lf == (PRECISE_FLOAT)0.0 || lf * f < (PRECISE_FLOAT)0.0)
         {
             changes++;
         }
@@ -457,7 +479,10 @@ static int numchanges(int np, const polynomial *sseq, DBL a)
 *   NOTE: This routine has one severe bug: When the interval containing the
 *         root [min, max] has a root at one of its endpoints, as well as one
 *         within the interval, the root at the endpoint will be returned
-*         rather than the one inside.
+*         rather than the one inside. (May, 2018 - Saw no indication of
+*         exactly this though the regula_falsa code prior to changes
+*         often returned false roots at ends if evaluated values very small. The
+*         sturm chain method itself sees roots on intervals of (minv, maxv]).
 *
 * CHANGES
 *
@@ -465,9 +490,9 @@ static int numchanges(int np, const polynomial *sseq, DBL a)
 *
 ******************************************************************************/
 
-static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value, int atmin, int atmax, DBL *roots)
+static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PRECISE_FLOAT max_value, int atmin, int atmax, DBL *roots)
 {
-    DBL mid;
+    PRECISE_FLOAT mid;
     int n1, n2, its, atmid;
 
     if (((atmin - atmax) == 1) && ((max_value - min_value) < REGULA_FALSA_THRESHOLD))
@@ -484,7 +509,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
 
             for (its = 0; its < MAX_ITERATIONS; its++)
             {
-                mid = (min_value + max_value) / 2;
+                mid = (min_value + max_value) / (PRECISE_FLOAT)2.0;
 
                 atmid = numchanges(np, sseq, mid);
 
@@ -496,20 +521,20 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
                     return(0);
                 }
 
-                if (fabs(mid) > RELERROR)
+                if (PRECISE_FABS(mid) > RELERROR)
                 {
-                    if (fabs((max_value - min_value) / mid) < RELERROR)
+                    if (PRECISE_FABS((max_value - min_value) / mid) < RELERROR)
                     {
-                        roots[0] = mid;
+                        roots[0] = (DBL)mid;
 
                         return(1);
                     }
                 }
                 else
                 {
-                    if (fabs(max_value - min_value) < RELERROR)
+                    if (PRECISE_FABS(max_value - min_value) < RELERROR)
                     {
-                        roots[0] = mid;
+                        roots[0] = (DBL)mid;
 
                         return(1);
                     }
@@ -527,7 +552,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
 
             /* Bisection took too long - just return what we got */
 
-            roots[0] = mid;
+            roots[0] = (DBL)mid;
 
             return(1);
         }
@@ -538,7 +563,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
 
     for (its = 0; its < MAX_ITERATIONS; its++)
     {
-        mid = (min_value + max_value) / 2;
+        mid = (min_value + max_value) / (PRECISE_FLOAT)2.0;
 
         atmid = numchanges(np, sseq, mid);
 
@@ -550,20 +575,20 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
             return(0);
         }
 
-        if (fabs(mid) > RELERROR)
+        if (PRECISE_FABS(mid) > RELERROR)
         {
-            if (fabs((max_value - min_value) / mid) < RELERROR)
+            if (PRECISE_FABS((max_value - min_value) / mid) < RELERROR)
             {
-                roots[0] = mid;
+                roots[0] = (DBL)mid;
 
                 return(1);
             }
         }
         else
         {
-            if (fabs(max_value - min_value) < RELERROR)
+            if (PRECISE_FABS(max_value - min_value) < RELERROR)
             {
-                roots[0] = mid;
+                roots[0] = (DBL)mid;
 
                 return(1);
             }
@@ -576,7 +601,7 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
         {
             if ((max_value - min_value) < SBISECT_MULT_ROOT_THRESHOLD)
             {
-                roots[0] = mid;
+                roots[0] = (DBL)mid;
                 return(1);
             }
 
@@ -613,11 +638,10 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
 
     /* Took too long to bisect.  Just return what we got. */
 
-    roots[0] = mid;
+    roots[0] = (DBL)mid;
 
     return(1);
 }
-
 
 
 /*****************************************************************************
@@ -650,10 +674,10 @@ static int sbisect(int np, const polynomial *sseq, DBL min_value, DBL max_value,
 *
 ******************************************************************************/
 
-static DBL polyeval(DBL x, int n, const DBL *Coeffs)
+static PRECISE_FLOAT polyeval(PRECISE_FLOAT x, int n, const PRECISE_FLOAT *Coeffs)
 {
     int i;
-    DBL val;
+    PRECISE_FLOAT val;
 
     val = Coeffs[n];
 
@@ -693,29 +717,27 @@ static DBL polyeval(DBL x, int n, const DBL *Coeffs)
 *
 ******************************************************************************/
 
-static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *val)
+static bool regula_falsa(const int order, const PRECISE_FLOAT *coef, PRECISE_FLOAT a, PRECISE_FLOAT b, DBL *val)
 {
     bool found=false;
     int its;
-    DBL fa, fb, x, fx, lfx, mid;
+    PRECISE_FLOAT fa, fb, x, fx, lfx, mid;
 
     fa = polyeval(a, order, coef);
     fb = polyeval(b, order, coef);
 
-    if (fa * fb > 0.0)
+    if (fa * fb > (PRECISE_FLOAT)0.0)
     {
         return(false);
     }
 
     lfx = fa;
 
-    mid = (a + b) / 2;
+    mid = (a + b) / (PRECISE_FLOAT)2.0;
 
     // NOTE: 2x MAX_ITERATIONS multiplier over sturm bisection requirement found to
     // happen in practice. Necessary if you want regula_falsa to find the root
-    // where the algorithm converges very slowly. Later look to tune setting with
-    // respect to performance as this method vs sturm bisection run at different
-    // speeds.
+    // where the algorithm converges very slowly.
 
     for (its = 0; its < (MAX_ITERATIONS * 2); its++)
     {
@@ -723,11 +745,11 @@ static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *va
 
         fx = polyeval(x, order, coef);
 
-        if (fabs(mid) > RELERROR)
+        if (PRECISE_FABS(mid) > RELERROR)
         {
-            if (fabs((b - a) / mid) < RELERROR)
+            if (PRECISE_FABS((b - a) / mid) < RELERROR)
             {
-                *val = mid;
+                *val = (DBL)mid;
 
                 found = true;
 
@@ -736,17 +758,17 @@ static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *va
         }
         else
         {
-            if (fabs(b - a) < RELERROR)
+            if (PRECISE_FABS(b - a) < RELERROR)
             {
-                *val = mid;
+                *val = (DBL)mid;
 
                 found = true;
 
                 break;
             }
-            else if (fabs(fx) < ((DBL)1.0/pow((DBL)10.0,std::numeric_limits<DBL>::digits10)))
+            else if (PRECISE_FABS(fx) < PRECISE_EPSILON)
             {
-                *val = x;
+                *val = (DBL)x;
 
                 found = true;
 
@@ -754,61 +776,61 @@ static bool regula_falsa(const int order, const DBL *coef, DBL a, DBL b, DBL *va
             }
         }
 
-        if (fa < 0)
+        if (fa < (PRECISE_FLOAT)0.0)
         {
-            if (fx < 0)
+            if (fx < (PRECISE_FLOAT)0.0)
             {
                 a = x;
 
-                mid = (a + b) / 2;
+                mid = (a + b) / (PRECISE_FLOAT)2.0;
 
                 fa = fx;
 
-                if ((lfx * fx) > 0)
+                if ((lfx * fx) > (PRECISE_FLOAT)0.0)
                 {
-                    fb /= 2;
+                    fb /= (PRECISE_FLOAT)2.0;
                 }
             }
             else
             {
                 b = x;
 
-                mid = (a + b) / 2;
+                mid = (a + b) / (PRECISE_FLOAT)2.0;
 
                 fb = fx;
 
-                if ((lfx * fx) > 0)
+                if ((lfx * fx) > (PRECISE_FLOAT)0.0)
                 {
-                    fa /= 2;
+                    fa /= (PRECISE_FLOAT)2.0;
                 }
             }
         }
         else
         {
-            if (fx < 0)
+            if (fx < (PRECISE_FLOAT)0.0)
             {
                 b = x;
 
-                mid = (a + b) / 2;
+                mid = (a + b) / (PRECISE_FLOAT)2.0;
 
                 fb = fx;
 
-                if ((lfx * fx) > 0)
+                if ((lfx * fx) > (PRECISE_FLOAT)0.0)
                 {
-                    fa /= 2;
+                    fa /= (PRECISE_FLOAT)2.0;
                 }
             }
             else
             {
                 a = x;
 
-                mid = (a + b) / 2;
+                mid = (a + b) / (PRECISE_FLOAT)2.0;
 
                 fa = fx;
 
-                if ((lfx * fx) > 0)
+                if ((lfx * fx) > (PRECISE_FLOAT)0.0)
                 {
-                    fb /= 2;
+                    fb /= (PRECISE_FLOAT)2.0;
                 }
             }
         }
@@ -924,7 +946,6 @@ static int solve_quadratic(const DBL *x, DBL *y)
 *   Alexander Enzmann
 *
 * DESCRIPTION
-*
 *
 *   Solve the cubic equation:
 *
@@ -1400,7 +1421,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     // Reverse coefficients into order used herein.
     for (i = 0; i <= order; i++)
     {
-        sseq[0].coef[order-i] = Coeffs[i];
+        sseq[0].coef[order-i] = (PRECISE_FLOAT)Coeffs[i];
     }
 
     /* Build the Sturm sequence */
@@ -1446,8 +1467,8 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     // Perhaps related to how the sturm chain is pruned in modp(). Until sorted adding
     // the following sanity check which restores a MAX_DISTANCE upper bound where
     // root(s) exists above estimated upper bound.
-    atmin = numchanges(np, sseq, max_value);
-    atmax = numchanges(np, sseq, MAX_DISTANCE);
+    atmin = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
+    atmax = numchanges(np, sseq, (PRECISE_FLOAT)MAX_DISTANCE);
     if ((atmin - atmax) != 0)
     {
         max_value = MAX_DISTANCE;
@@ -1456,7 +1477,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     {
         atmax = atmin;
     }
-    atmin = numchanges(np, sseq, min_value);
+    atmin = numchanges(np, sseq, (PRECISE_FLOAT)min_value);
 
     nroots = atmin - atmax;
 
@@ -1467,7 +1488,8 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     /* perform the bisection. */
 
-    return(sbisect(np, sseq, min_value, max_value, atmin, atmax, roots));
+    return(sbisect(np, sseq, (PRECISE_FLOAT)min_value, (PRECISE_FLOAT)max_value,
+           atmin, atmax, roots));
 }
 
 
