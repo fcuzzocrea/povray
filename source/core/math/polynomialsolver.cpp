@@ -1554,28 +1554,14 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
 int Solve_Polynomial(int n, const DBL *c0, DBL *r, int sturm, DBL epsilon, RenderStatistics& stats)
 {
-    int roots, i;
+    int roots;
     const DBL *c;
 
     stats[Polynomials_Tested]++;
 
     roots = 0;
 
-    /*
-     * Determine the "real" order of the polynomial, i.e.
-     * eliminate small leading coefficients.
-     */
-
-    i = 0;
-
-    while ((i < n) && (fabs(c0[i]) < SMALL_ENOUGH))
-    {
-        i++;
-    }
-
-    n -= i;
-
-    c = &c0[i];
+    c = &c0[0];
 
     switch (n)
     {
