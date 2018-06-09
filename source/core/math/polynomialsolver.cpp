@@ -208,7 +208,7 @@ static int modp(const polynomial *u, const polynomial *v, polynomial *r)
 
     *r = *u;
 
-    if (v->coef[v->ord] < 0.0)
+    if (v->coef[v->ord] < (PRECISE_FLOAT)0.0)
     {
         for (k = u->ord - v->ord - 1; k >= 0; k -= 2)
         {
@@ -236,17 +236,14 @@ static int modp(const polynomial *u, const polynomial *v, polynomial *r)
 
     k = v->ord - 1;
 
-    // NOTE: Using DBL here to avoid need for powq() or a quad/128 bit version of pow().
-    // Compilers like gnu g++ include some built in 128 bit support on 64 bit systems
-    // without an additional library, but it doesn't include powq(). Reality is the
-    // leading coefficient pruning value here need not be exact, but close to minimum
-    // 'good' zero for floating point type used for sturm chain set up to be valid. If an
-    // incoming polynomial is well behaved - no near zero values during polynomial division -
-    // much smaller values can be used, but knowing this a priori impossible. Too small
-    // a value can lead to false roots.
+    // NOTE: Want a default value close to minimum 'effective' zeros as calculated
+    // internally. Incoming 'effective' zeros should already have been set to
+    // exactly 0.0. If an incoming polynomial is well behaved - no near zero values
+    // during polynomial division - much smaller values can be used, but knowing
+    // this a priori impossible. Too small a value can lead to false roots.
     //
     while (k >= 0 &&
-           PRECISE_FABS(r->coef[k]) < (PRECISE_FLOAT)((DBL)1.0/pow((DBL)10.0,PRECISE_DIG)))
+           PRECISE_FABS(r->coef[k]) < (PRECISE_FLOAT)PRECISE_EPSILON)
     {
         r->coef[k] = (PRECISE_FLOAT)0.0;
 
@@ -876,15 +873,73 @@ static bool regula_falsa(const int order, const PRECISE_FLOAT *coef, PRECISE_FLO
 
 static int solve_quadratic(const DBL *x, DBL *y)
 {
+#if (1)
+
+    // NOTE: Numerically more accurate quadratic solver in a form from CERN
+    // December 2016 presenation which is computationally more effecient
+    // for most compilers - though gains differ substantially.
+    //
+    // See: "Portable SIMD and the VecCore Library." CERN. December 2016
+    //
+    // Numerical issues see: Numerical Recipes in C. 2nd Ed. or newer.
+    //
+
+    PRECISE_FLOAT a = x[0];
+    PRECISE_FLOAT b = x[1];
+    PRECISE_FLOAT c = x[2];
+    PRECISE_FLOAT tmp;
+
+    if (PRECISE_FABS(a) < POV_DBL_EPSILON)
+    {
+        if (PRECISE_FABS(b) < POV_DBL_EPSILON)
+        {
+            return(0);
+        }
+
+        y[0] = (DBL)(-c / b);
+
+        return(1);
+    }
+
+    PRECISE_FLOAT a_inv = (PRECISE_FLOAT)1.0 / a;
+    PRECISE_FLOAT delta = b * b - (PRECISE_FLOAT)4.0 * a * c;
+    PRECISE_FLOAT s     = (b >= 0) ? (PRECISE_FLOAT)1.0 : (PRECISE_FLOAT)-1.0;
+
+    int roots = delta > (PRECISE_FLOAT)0.0 ? 2 : delta < (PRECISE_FLOAT)0.0 ? 0 : 1;
+
+    switch (roots) {
+    case 2:
+      tmp  = (PRECISE_FLOAT)-0.5 * (b + s * PRECISE_SQRT(delta));
+      y[1] = (DBL)(c / tmp);
+      y[0] = (DBL)(tmp * a_inv);
+      return(roots);
+
+    case 0:
+      return(roots);
+
+    case 1:
+      y[0] = (DBL)((PRECISE_FLOAT)-0.5 * b * a_inv);
+      return(roots);
+
+    default:
+      return(0);
+    }
+
+#else
+
+    // NOTE: POV-Ray versions of the quadratic solver have been atypical since
+    // the original 'traditional' implementation. The version below only works
+    // reliably for roots where a and b values limited to >= about 1e-10.
+
     DBL d, t, a, b, c;
 
     a = x[0];
     b = -x[1];
     c = x[2];
 
-    if (a == 0.0)
+    if (fabs(a) < SMALL_ENOUGH)
     {
-        if (b == 0.0)
+        if (fabs(b) < SMALL_ENOUGH)
         {
             return(0);
         }
@@ -894,14 +949,16 @@ static int solve_quadratic(const DBL *x, DBL *y)
         return(1);
     }
 
-    // normalize the coefficients
+    // Normalize the coefficients. Added for v3.7.
     b /= a;
     c /= a;
     a  = 1.0;
 
     d = b * b - 4.0 * a * c;
 
-    /* Treat values of d around 0 as 0. */
+    // Treat values of d around 0 as 0. Effectively returns one root
+    // where supposing infinite numerical accuracy there are two.
+    // The cost is bad roots - fuzz / inaccuracy in some results.
 
     if ((d > -SMALL_ENOUGH) && (d < SMALL_ENOUGH))
     {
@@ -925,6 +982,7 @@ static int solve_quadratic(const DBL *x, DBL *y)
     y[1] = (b - d) / t;
 
     return(2);
+#endif
 }
 
 
@@ -973,7 +1031,7 @@ static int solve_cubic(const DBL *x, DBL *y)
 
     a0 = x[0];
 
-    if (a0 == 0.0)
+    if (fabs(a0) < POV_DBL_EPSILON)
     {
         return(solve_quadratic(&x[1], y));
     }
@@ -1081,19 +1139,26 @@ static int solve_quartic(const DBL *x, DBL *results)
 
     c0 = x[0];
 
-    if (c0 != 1.0)
+    if (fabs(c0) < POV_DBL_EPSILON)
     {
-        c1 = x[1] / c0;
-        c2 = x[2] / c0;
-        c3 = x[3] / c0;
-        c4 = x[4] / c0;
+        return(solve_cubic(&x[1], results));
     }
     else
     {
-        c1 = x[1];
-        c2 = x[2];
-        c3 = x[3];
-        c4 = x[4];
+        if (c0 != 1.0)
+        {
+            c1 = x[1] / c0;
+            c2 = x[2] / c0;
+            c3 = x[3] / c0;
+            c4 = x[4] / c0;
+        }
+        else
+        {
+            c1 = x[1];
+            c2 = x[2];
+            c3 = x[3];
+            c4 = x[4];
+        }
     }
 
     /* The first step is to take the original equation:
@@ -1268,19 +1333,26 @@ static int solve_quartic(const DBL *x, DBL *results)
 
     c0 = x[0];
 
-    if (c0 != 1.0)
+    if (fabs(c0) < POV_DBL_EPSILON)
     {
-        c1 = x[1] / c0;
-        c2 = x[2] / c0;
-        c3 = x[3] / c0;
-        c4 = x[4] / c0;
+        return(solve_cubic(&x[1], results));
     }
     else
     {
-        c1 = x[1];
-        c2 = x[2];
-        c3 = x[3];
-        c4 = x[4];
+        if (c0 != 1.0)
+        {
+            c1 = x[1] / c0;
+            c2 = x[2] / c0;
+            c3 = x[3] / c0;
+            c4 = x[4] / c0;
+        }
+        else
+        {
+            c1 = x[1];
+            c2 = x[2];
+            c3 = x[3];
+            c4 = x[4];
+        }
     }
 
     /* Compute the cubic resolvant */
@@ -1417,34 +1489,68 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     polynomial sseq[MAX_ORDER+1];
     DBL min_value, max_value, max_value2, Abs_Coeff_n;
     int i, nroots, np, atmin, atmax;
+    bool potentialLeadingZero = true;
 
+    //---
     // Reverse coefficients into order used herein.
+    // Drop any leading original order coefficients meaningfully 0.0.
+    // Set any remaining coefficients meaningfully 0.0 to exactly 0.0.
+    //
+    np = 0;
     for (i = 0; i <= order; i++)
     {
-        sseq[0].coef[order-i] = (PRECISE_FLOAT)Coeffs[i];
+        if (potentialLeadingZero && fabs(Coeffs[i]) < POV_DBL_EPSILON)
+        {
+            np++;
+        }
+        else
+        {
+            potentialLeadingZero = false;
+            if (fabs(Coeffs[i]) < POV_DBL_EPSILON)
+            {
+                sseq[0].coef[order-i] = (PRECISE_FLOAT)0.0;
+            }
+            else
+            {
+                sseq[0].coef[order-i] = (PRECISE_FLOAT)Coeffs[i];
+            }
+        }
+    }
+    order -= np;
+    if (order == 0)
+    {
+        return(0);
+    }
+    else if (order == 1)
+    {
+        roots[0] = -sseq[0].coef[0] / sseq[0].coef[1];
+
+        return(1);
     }
 
-    /* Build the Sturm sequence */
-
+    //---
+    // Build the Sturm sequence
+    //
     np = buildsturm(order, &sseq[0]);
 
-    /* Get the total number of visible roots */
-
+    //---
+    // Calculate the total number of visible roots.
     // NOTE: Changed to <=0 test over ==0 due sphere_sweep b_spline
     // going negative when the modp leading coef filter set lower.
     // Similar change to the numchanges based test below.
-
+    //
     if ((nroots = visible_roots(np, sseq)) <= 0)
     {
         return(0);
     }
 
+    //---
     // Bracket the roots
-
+    //
     min_value = 0.0;
     max_value = MAX_DISTANCE;
 
-    // Use variation of Augustin-Louis Cauchy's methods to determine an upper bound for max_value.
+    // Use variation of Augustin-Louis Cauchy's method to determine an upper bound for max_value.
 
     // Tighter upper bound found at:
     //    https://en.wikipedia.org/wiki/Properties_of_polynomial_roots#Other_bounds
@@ -1452,8 +1558,8 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     //    Cohen, Alan M. (2009). "Bounds for the roots of polynomial equations".
     //    Mathematical Gazette. 93: 87-88.
     // NOTE: Had to use > 1.0 in max_value2 calculation in practice...
-
-    Abs_Coeff_n = fabs(Coeffs[0]); // Solve_Polynomial() dumps leading zeroes.
+    //
+    Abs_Coeff_n = fabs(Coeffs[0]); // Leading zeros dropped above.
     max_value2  = 1.1 + fabs(Coeffs[1]/Abs_Coeff_n);
     max_value   = fabs(Coeffs[2]);
     for (i = 3; i <= order; i++)
@@ -1467,6 +1573,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     // Perhaps related to how the sturm chain is pruned in modp(). Until sorted adding
     // the following sanity check which restores a MAX_DISTANCE upper bound where
     // root(s) exists above estimated upper bound.
+    //
     atmin = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
     atmax = numchanges(np, sseq, (PRECISE_FLOAT)MAX_DISTANCE);
     if ((atmin - atmax) != 0)
@@ -1486,8 +1593,8 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
         return(0);
     }
 
-    /* perform the bisection. */
-
+    // perform the bisection.
+    //
     return(sbisect(np, sseq, (PRECISE_FLOAT)min_value, (PRECISE_FLOAT)max_value,
            atmin, atmax, roots));
 }

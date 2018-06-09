@@ -399,13 +399,20 @@ constexpr int CX_STRCMP(char const* lhs, char const* rhs)
 /// Where @ref PRECISE_FLOAT a C++11 standard floating point type this should be
 /// the default fabs. When using, for example, __float128 with GNU g++ in a supported 64 bit
 /// environment the value would defined to be __builtin_fabsq - as that function is a built-in
-/// for 64 bit compiles. It might be set to fabsq if using GNU g++'s quadmath library.
-///
-/// @note
-///    At present PRECISE_FABS, like @ref PRECISE_FLOAT, applies only within polysolve().
+/// for 64 bit compiles. It would be set to fabsq if using GNU g++'s quadmath library.
 ///
 #ifndef PRECISE_FABS
     #define PRECISE_FABS fabs
+#endif
+
+/// @def PRECISE_SQRT
+/// The floating point square root function name to use with @ref PRECISE_FLOAT.
+///
+/// Where @ref PRECISE_FLOAT a C++11 standard floating point type this should be
+/// the default sqrt. It would be set to sqrtq if using GNU g++'s quadmath library.
+///
+#ifndef PRECISE_SQRT
+    #define PRECISE_SQRT sqrt
 #endif
 
 /// @def PRECISE_DIGITS
@@ -445,17 +452,45 @@ constexpr int PRECISE_DIG  = PRECISE_FLT  ?
                              : FLT_DIG;
 
 /// @def PRECISE_EPSILON
-/// Internal 'constexpr DBL' value for minimum epsilon step for given @ref PRECISE_FLOAT.
+/// Internal 'constexpr DBL' value*2.0 for minimum epsilon step for given @ref PRECISE_FLOAT.
 ///
 /// Set to C+11 standard value where defined and to @ref PRECISE_EPSLN otherwise.
+///
+/// @note
+///     Using 2.0 multiplier due maths calculating coefficients for higher order polynomials
+///     introducing more than single bit/step error in practice.
 ///
 
 constexpr DBL PRECISE_EPSILON = PRECISE_FLT  ?
                                 PRECISE_DBL  ?
-                                PRECISE_LDBL ? PRECISE_EPSLN
-                                : LDBL_EPSILON
-                                : DBL_EPSILON
-                                : FLT_EPSILON;
+                                PRECISE_LDBL ? PRECISE_EPSLN*2.0
+                                : LDBL_EPSILON*2.0
+                                : DBL_EPSILON*2.0
+                                : FLT_EPSILON*2.0;
+
+/// @def POV_DBL_EPSILON
+/// Internal 'constexpr DBL' value for minimum epsilon step for given POV-Ray's @ref DBL.
+///
+/// Set to C+11 standard value*2.0 where defined and to @ref PRECISE_EPSLN*2.0 otherwise.
+///
+/// Using this value where we want a more accurate 'meaningful value not zero' tests than
+/// the EPSILON, SMALL_ENOUGH, etc. values which tend to be around 1e-10 which is much larger
+/// than, for example, the double DBL_EPSILON value of 2.2204460492503131e-16.
+///
+/// @note
+///     Using 2.0 multiplier due maths calculating coefficients for higher order polynomials
+///     introducing more than single bit/step error in practice.
+///
+constexpr int POV_DBL_IS_FLT  = CX_STRCMP(CX_XSTR(DBL), "float");
+constexpr int POV_DBL_IS_DBL  = CX_STRCMP(CX_XSTR(DBL), "double");
+constexpr int POV_DBL_IS_LDBL = CX_STRCMP(CX_XSTR(DBL), "long double");
+
+constexpr DBL POV_DBL_EPSILON = POV_DBL_IS_FLT  ?
+                                POV_DBL_IS_DBL  ?
+                                POV_DBL_IS_LDBL ? PRECISE_EPSLN*2.0
+                                : LDBL_EPSILON*2.0
+                                : DBL_EPSILON*2.0
+                                : FLT_EPSILON*2.0;
 
 /// @}
 ///
