@@ -2405,8 +2405,8 @@ bool TrueType::Inside_Glyph(DBL x, DBL y, const GlyphStruct* glyph) const
     for (i = 0; i < glyph->header.numContours; i++)
     {
 
-        xv = glyph->contours[i].x;
-        yv = glyph->contours[i].y;
+        xv = glyph->contours[i].x.data();
+        yv = glyph->contours[i].y.data();
 
         // Attempt an early exit for each contour of glyph.
         // Note: Depends of fonts and actual characters but, roughly, this
@@ -2427,7 +2427,7 @@ bool TrueType::Inside_Glyph(DBL x, DBL y, const GlyphStruct* glyph) const
             continue;
 
         // Quick test above shows contour range overlap with x, y so more to do.
-        fv = glyph->contours[i].flags;
+        fv = glyph->contours[i].flags.data();
         x0 = xv[0];
         y0 = yv[0];
 
