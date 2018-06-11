@@ -2,14 +2,14 @@
 // To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/ or send a
 // letter to Creative Commons, 444 Castro Street, Suite 900, Mountain View, California, 94041, USA.
 
-// Persistence of Vision Ray Tracer version 3.71 Include File
+// Persistence of Vision Ray Tracer version 3.8 Include File
 // File: arrays.inc
-// Last updated: June 3 2016
+// Last updated: June 11 2018
 // Description: Array manipulation macros...sorting, resizing, etc.
 
 #ifndef(ARRAYS_INC_TEMP)
 #declare ARRAYS_INC_TEMP = version;
-#version 3.71;
+#version 3.8;
 
 #ifdef(View_POV_Include_Stack)
    #debug "including arrays.inc\n"
