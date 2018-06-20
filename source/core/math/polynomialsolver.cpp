@@ -50,47 +50,53 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/// @def FUDGE_FACTOR2
-/// Value defining how close the quartic equation is to being a square
-/// of a quadratic in the OLD unused solve_quartic version kept for testing.
+/// @var FUDGE_FACTOR2
+/// @brief const DBL value defining how close quartic equation is to being a square
+/// of a quadratic.
 ///
 /// @note
 ///     The closer this can get to zero before roots disappear, the less the chance
 ///     you will get spurious roots.
 ///
+/// @attention
+///     Used only in the old unused version of solve_quartic().
+//      In other words not used.
+///
 const DBL FUDGE_FACTOR2 = -1.0e-5;
 
-/// @def FUDGE_FACTOR3
-/// Similar to @ref FUDGE_FACTOR2 at a later stage of the algebraic solver. Also
-/// long used only in the old kept for testing version of solve_quartic().
+/// @var FUDGE_FACTOR3
+/// @brief const DBL value similar to @ref FUDGE_FACTOR2 at a later stage of the
+/// algebraic solver.
 ///
-/// @note
+/// @ref FUDGE_FACTOR2 and @ref FUDGE_FACTOR3 have been defined so that quartic
+/// equations will properly render on fpu/compiler combinations that only have
+/// 64 bit IEEE precision. Do not arbitrarily change any of these values.
 ///
-///     @ref FUDGE_FACTOR2 and @ref FUDGE_FACTOR3 have been defined so that quartic
-///     equations will properly render on fpu/compiler combinations that only have
-///     64 bit IEEE precision. Do not arbitrarily change any of these values.
+/// If you have a machine with a proper fpu/compiler combo - like a Mac with a
+/// 68881, then use the native floating format (96 bits) and tune the values for
+/// a little less tolerance: something like: factor2 = -1.0e-7, factor3 =
+/// 1.0e-10. Twenty five years later the reality is still double accuracy
+/// due use of fastmath (not IEEE compliant) compiling, use of SSE Fused
+/// Multiply Add instructions, etc.
 ///
-///     If you have a machine with a proper fpu/compiler combo - like a Mac with a
-///     68881, then use the native floating format (96 bits) and tune the values for
-///     a little less tolerance: something like: factor2 = -1.0e-7, factor3 =
-///     1.0e-10. Twenty five years later the reality is still double accuracy
-///     due use of fastmath (not IEEE compliant) compiling, use of SSE Fused
-///     Multiply Add instructions, etc.
+/// @attention
+///     Used only in the old unused version of solve_quartic().
+//      In other words not used.
 ///
 const DBL FUDGE_FACTOR3 = 1.0e-7;
 
-/// @def TWO_M_PI_3
-/// Value used in solve_cubic() equal to 2.0 * pi / 3.0.
+/// @var TWO_M_PI_3
+/// const DBL value used in solve_cubic() equal to 2.0 * pi / 3.0.
 ///
 const DBL TWO_M_PI_3  = 2.0943951023931954923084;
 
-/// @def FOUR_M_PI_3
-/// Value used in solve_cubic() equal to 4.0 * pi / 3.0.
+/// @var FOUR_M_PI_3
+/// const DBL value used in solve_cubic() equal to 4.0 * pi / 3.0.
 ///
 const DBL FOUR_M_PI_3 = 4.1887902047863909846168;
 
-/// @def MAX_ITERATIONS
-/// Max number of polysolve sturm chain based bisections.
+/// @var MAX_ITERATIONS
+/// const int max number of polysolve sturm chain based bisections.
 ///
 /// @note
 ///     regula_falsa() uses twice this value internally as it can be
@@ -98,9 +104,10 @@ const DBL FOUR_M_PI_3 = 4.1887902047863909846168;
 ///
 const int MAX_ITERATIONS = 65;
 
-/// @def SBISECT_MULT_ROOT_THRESHOLD
-/// Value below which multiple roots ignored in sturm chained based bisection
-/// and a sigle root at the middle of the current interval is returned.
+/// @var SBISECT_MULT_ROOT_THRESHOLD
+/// const @ref PRECISE_FLOAT value below which multiple roots ignored in sturm
+/// chained based bisection and a single root at the middle of the current
+/// interval is returned.
 ///
 /// @note
 ///     Rays near tangent to surface create extremely close roots and instability
@@ -110,8 +117,9 @@ const int MAX_ITERATIONS = 65;
 ///
 const PRECISE_FLOAT SBISECT_MULT_ROOT_THRESHOLD = (PRECISE_FLOAT)1e-6;
 
-/// @def REGULA_FALSA_THRESHOLD
-/// Threshold below which regula_falsa function is tried when there is a single root.
+/// @var REGULA_FALSA_THRESHOLD
+/// const @ref PRECISE_FLOAT threshold below which regula_falsa function is tried
+/// when there is a single root.
 ///
 /// @note
 ///     Ray interval max_value - min_value threshold below which regula_falsa
@@ -127,19 +135,20 @@ const PRECISE_FLOAT SBISECT_MULT_ROOT_THRESHOLD = (PRECISE_FLOAT)1e-6;
 ///
 const PRECISE_FLOAT REGULA_FALSA_THRESHOLD = (PRECISE_FLOAT)1.0;
 
-/// @def RELERROR
-/// Smallest relative error along the ray when using the polysolve(), sturm
-/// chain bisection / regula-falsi method.
+/// @var RELERROR
+/// const @ref PRECISE_FLOAT smallest relative error along the ray when using
+/// the polysolve(), sturm chain bisection / regula-falsi method.
 ///
 const PRECISE_FLOAT RELERROR = (PRECISE_FLOAT)1.0e-12;
 
-/// @def SMALL_ENOUGH
-/// Used to filter determinant value in solve_quadratic() in an unusual way.
-/// Used in solve_quartic() to filter values ahead of the trailing quadratics.
+/// @var SMALL_ENOUGH
+/// const @ref DBL value used to filter determinant value in older
+/// solve_quadratic() in an unusual way causing artifacts. Used too in
+/// solve_quartic() to filter values ahead of the trailing quadratics.
 ///
 /// @todo
 ///     Suspect value is larger than it should really be and very likely should
-///     not be used at all in solve_quadratic() as it is.
+///     not be used at all in solve_quartic() as it is.
 ///
 const DBL SMALL_ENOUGH = 1.0e-10;
 

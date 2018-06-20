@@ -118,44 +118,6 @@
 ///
 //******************************************************************************
 ///
-/// @name C++11 Constant Expression Support
-///
-/// The following macros and constant expression (constexpr) functions enable the set up of
-/// compile time typed contants.
-///
-/// References in addtion to the C++11 standard itself:
-///     * [sac10-constexpr.pdf](http://www.stroustrup.com/sac10-constexpr.pdf)
-///     * [n2235.pdf](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2235.pdf)
-///
-/// @{
-
-/// @def CX_XSTR(A)
-/// Macro converts preprocessor macro string to a contant string.
-///
-/// @note
-///    Itself using an macro internale macro called CX_STR(A).
-///
-#define CX_XSTR(A) CX_STR(A)
-#define CX_STR(A) #A
-
-/// @def CX_STRCMP(A,B)
-/// constexpr function comparing two strings in compile time constant fashion.
-///
-/// @param[in] A First string.
-/// @param[in] B Second string.
-/// @return Integer 0 on matching strings and non zero integer otherwise.
-///
-constexpr int CX_STRCMP(char const* lhs, char const* rhs)
-{
-    return (('\0' == lhs[0]) && ('\0' == rhs[0])) ? 0
-        :  (lhs[0] != rhs[0]) ? (lhs[0] - rhs[0])
-        : CX_STRCMP( lhs+1, rhs+1 );
-}
-
-/// @}
-///
-//******************************************************************************
-///
 /// @name Fundamental Data Types
 ///
 /// The following macros define essential data types. It is recommended that system-specific
@@ -358,9 +320,72 @@ constexpr int CX_STRCMP(char const* lhs, char const* rhs)
 #ifndef SNGL
     #define SNGL float
 #endif
+/// @}
+///
+//******************************************************************************
+///
+/// @name C++11 Constant Expression Support
+///
+/// The following macros and constant expression (constexpr) functions enable the set up of
+/// compile time typed contants.
+///
+/// References in addtion to the C++11 standard itself:
+///     * [sac10-constexpr.pdf](http://www.stroustrup.com/sac10-constexpr.pdf)
+///     * [n2235.pdf](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2235.pdf)
+///     * [github constexpr function library](https://github.com/elbeno/constexpr)
+///
+/// @attention
+///     Do NOT use any CX_ prefixed function at runtime. Use them carefully at
+///     compile time. Currently, no error checking is done. Aim is to move burden for
+///     complex macro definitions from build systems like autotools, cmake, etc into C++
+///     itself where the C++11 standard supports it. If found to fly well in
+///     practice, will look to make any constant expression functions more robust.
+///
+/// @{
+
+/// @def CX_STR(A)
+/// Macro used by @ref CX_XSTR(A) in conversion of definition to a string value.
+///
+/// @def CX_XSTR(A)
+/// Macro converts preprocessor macro string to a contant string.
+///
+/// @note
+///    Itself using an macro internal macro called CX_STR(A).
+///
+#define CX_XSTR(A) CX_STR(A)
+#define CX_STR(A) #A
+
+static constexpr int CX_STRCMP(char const* lhs, char const* rhs); // Doxygen requires.
+/// constexpr function comparing two strings in compile time constant fashion.
+///
+/// @param[in] lhs First string.
+/// @param[in] rhs Second string.
+/// @return Integer 0 on matching strings and non zero integer otherwise.
+///
+static constexpr int CX_STRCMP(char const* lhs, char const* rhs)
+{
+    return (('\0' == lhs[0]) && ('\0' == rhs[0])) ? 0
+        :  (lhs[0] != rhs[0]) ? (lhs[0] - rhs[0])
+        : CX_STRCMP( lhs+1, rhs+1 );
+}
+
+static constexpr POV_INT64 CX_IPOW(POV_INT64 base, int exp, POV_INT64 result = 1); // Doxygen requires.
+/// constexpr function implementing integer pow() in compile time constant fashion.
+///
+/// @note
+///     Optional third argument part of implementation. Call as follows: CX_IPOW(10,3).
+///
+/// @param[in] base
+/// @param[in] exp
+/// @param[in] result (do NOT specify on actual first call)
+/// @return Integer base raised to exponent.
+///
+static constexpr POV_INT64 CX_IPOW(POV_INT64 base, int exp, POV_INT64 result) {
+  return exp < 1 ? result : CX_IPOW(base*base, exp/2, (exp % 2) ? result*base : result);
+}
 
 /// @def PRECISE_FLOAT
-/// The foating-point data type to use within the polysolve() solver.
+/// Optionally more accurate foating-point data type to use within root solver related code.
 ///
 /// Normally PRECISE_FLOAT will be set to @ref DBL. However, 'long double' is a
 /// precision guaranteed by the C++ standard to exist and to be at least of
@@ -371,6 +396,10 @@ constexpr int CX_STRCMP(char const* lhs, char const* rhs)
 /// data types. Recent GNU g++ compilers, for example, offer the __float128
 /// data type which coorresponds to the IEEE 754-2008 binary128 type.
 ///
+/// The following functions support PRECISE_FLOAT:
+///     * polysolve(). Known to users as sturm.
+///     * solve_quadratic()
+///
 /// @note
 ///     The setting is used to set internal 'constextr int PRECISE_DIG' and
 ///     'constexpr DBL PRECISE_EPSILON' typed values.
@@ -379,14 +408,10 @@ constexpr int CX_STRCMP(char const* lhs, char const* rhs)
 ///     If @ref PRECISE_FLOAT is set to 'float', 'double' or 'long double', the C++11 standard
 ///     itself defines via cfloat include the macros: FLT_DIG, DBL_DIG, LDBL_DIG, FLT_EPSILON,
 ///     DBL_EPSILON, LDBL_EPSILON. These macro values are used to set PRECISE_DIG and
-///     PRECISE_EPSILON polysolve() values via the C++ constexpr mechanism.
-///
-/// @note
-///     Users access the polysolve() solver via the 'sturm' keyword though it's always
-///     used for polynomials of order 5 or more.
+///     PRECISE_EPSILON values via the C++ constexpr mechanism.
 ///
 /// @attention
-///     polysolve() math with data types not run in hardware or with awkward bit sizes with
+///     Math with data types not run in hardware or with awkward bit sizes with
 ///     respect to the running computer's data bus size will run substantially slower.
 ///
 #ifndef PRECISE_FLOAT
@@ -410,6 +435,9 @@ constexpr int CX_STRCMP(char const* lhs, char const* rhs)
 ///
 /// Where @ref PRECISE_FLOAT a C++11 standard floating point type this should be
 /// the default sqrt. It would be set to sqrtq if using GNU g++'s quadmath library.
+/// If using the inbuilt g++ __float128 capability, set to cast to and from (long double)
+/// to avoid the use of quadmath - though this of course effectively limits sqrt()
+/// accuracy to 'long double'.
 ///
 #ifndef PRECISE_SQRT
     #define PRECISE_SQRT sqrt
@@ -435,8 +463,17 @@ constexpr int CX_STRCMP(char const* lhs, char const* rhs)
     #define PRECISE_EPSLN 1.92592994438724e-34
 #endif
 
-/// @def PRECISE_DIG
-/// Internal 'constexpr int' value for maximum decimal digits for given @ref PRECISE_FLOAT.
+/// @var PRECISE_FLT
+/// A 'constexpr int' 0 when @ref PRECISE_FLOAT resolves to float type or !=0 otherwise.
+///
+/// @var PRECISE_DBL
+/// A 'constexpr int' 0 when @ref PRECISE_FLOAT resolves to double type or !=0 otherwise.
+///
+/// @var PRECISE_LDBL
+/// A 'constexpr int' 0 when @ref PRECISE_FLOAT resolves to long double type or !=0 otherwise.
+///
+/// @var PRECISE_DIG
+/// A 'constexpr int' maximum decimal digits given @ref PRECISE_FLOAT.
 ///
 /// Set to C+11 standard value where defined and to @ref PRECISE_DIGITS otherwise.
 ///
@@ -451,16 +488,15 @@ constexpr int PRECISE_DIG  = PRECISE_FLT  ?
                              : DBL_DIG
                              : FLT_DIG;
 
-/// @def PRECISE_EPSILON
-/// Internal 'constexpr DBL' value*2.0 for minimum epsilon step for given @ref PRECISE_FLOAT.
+/// @var PRECISE_EPSILON
+/// A 'constexpr DBL' value for minimum epsilon step given @ref PRECISE_FLOAT.
 ///
-/// Set to C+11 standard value where defined and to @ref PRECISE_EPSLN otherwise.
+/// Set to C+11 standard value*2.0 where defined and to @ref PRECISE_EPSLN*2.0 otherwise.
 ///
 /// @note
 ///     Using 2.0 multiplier due maths calculating coefficients for higher order polynomials
 ///     introducing more than single bit/step error in practice.
 ///
-
 constexpr DBL PRECISE_EPSILON = PRECISE_FLT  ?
                                 PRECISE_DBL  ?
                                 PRECISE_LDBL ? PRECISE_EPSLN*2.0
@@ -468,8 +504,32 @@ constexpr DBL PRECISE_EPSILON = PRECISE_FLT  ?
                                 : DBL_EPSILON*2.0
                                 : FLT_EPSILON*2.0;
 
-/// @def POV_DBL_EPSILON
-/// Internal 'constexpr DBL' value for minimum epsilon step for given POV-Ray's @ref DBL.
+/// @var POV_DBL_IS_FLT
+/// A 'constexpr int' 0 when @ref DBL resolves to float type or !=0 otherwise.
+///
+/// @var POV_DBL_IS_DBL
+/// A 'constexpr int' 0 when @ref DBL resolves to double type or !=0 otherwise.
+///
+/// @var POV_DBL_IS_LDBL
+/// A 'constexpr int' 0 when @ref DBL resolves to long double type or !=0 otherwise.
+///
+/// @var POV_DBL_DIG
+/// A 'constexpr int' value for maximum decimal digits for given @ref DBL.
+///
+/// Set to C+11 standard value where defined and to @ref PRECISE_DIGITS otherwise.
+///
+constexpr int POV_DBL_IS_FLT  = CX_STRCMP(CX_XSTR(DBL), "float");
+constexpr int POV_DBL_IS_DBL  = CX_STRCMP(CX_XSTR(DBL), "double");
+constexpr int POV_DBL_IS_LDBL = CX_STRCMP(CX_XSTR(DBL), "long double");
+constexpr int POV_DBL_DIG  = POV_DBL_IS_FLT  ?
+                             POV_DBL_IS_DBL  ?
+                             POV_DBL_IS_LDBL ? PRECISE_DIGITS
+                             : LDBL_DIG
+                             : DBL_DIG
+                             : FLT_DIG;
+
+/// @var POV_DBL_EPSILON
+/// A 'constexpr DBL' value for minimum epsilon step for given POV-Ray's @ref DBL.
 ///
 /// Set to C+11 standard value*2.0 where defined and to @ref PRECISE_EPSLN*2.0 otherwise.
 ///
@@ -481,16 +541,24 @@ constexpr DBL PRECISE_EPSILON = PRECISE_FLT  ?
 ///     Using 2.0 multiplier due maths calculating coefficients for higher order polynomials
 ///     introducing more than single bit/step error in practice.
 ///
-constexpr int POV_DBL_IS_FLT  = CX_STRCMP(CX_XSTR(DBL), "float");
-constexpr int POV_DBL_IS_DBL  = CX_STRCMP(CX_XSTR(DBL), "double");
-constexpr int POV_DBL_IS_LDBL = CX_STRCMP(CX_XSTR(DBL), "long double");
-
 constexpr DBL POV_DBL_EPSILON = POV_DBL_IS_FLT  ?
                                 POV_DBL_IS_DBL  ?
                                 POV_DBL_IS_LDBL ? PRECISE_EPSLN*2.0
                                 : LDBL_EPSILON*2.0
                                 : DBL_EPSILON*2.0
                                 : FLT_EPSILON*2.0;
+
+
+/// @var MIN_ISECT_DEPTH_RETURNED
+/// A 'constexpr DBL' value below which roots from primitive objects are not returned.
+///
+/// The value will track @ref DBL float type and is very roughly the square root
+/// of the determined POV_DBL_EPSILON. The plan is to migrate base shapes to
+/// this single value instead of the many different thresholds used today.
+/// Aiming for both more accuracy and something which automatically adjust to
+/// the DBL type used.
+///
+constexpr DBL MIN_ISECT_DEPTH_RETURNED = POV_DBL_EPSILON*(DBL)CX_IPOW(10,POV_DBL_DIG/2+1);
 
 /// @}
 ///

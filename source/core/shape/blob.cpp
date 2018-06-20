@@ -119,34 +119,35 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/// @def DEPTH_TOLERANCE
-/// Minimum returned intersection depth for a valid intersection.
+/// @var DEPTH_TOLERANCE
+/// const DBL value above which intersections are returned.
 ///
-/// @note
-///     Value for @ref DEPTH_TOLERANCE was since v1.0 set to 1.0e-2. Further the
-///     value was used for both ling used for the minimum returned and as a mindist
-///     in all of the determine_influences()'s intersect_<thing> functions. The
-///     latter probably done initially to help the initial solve_quartic() function
-///     though using such a large value to determine when to add and remove
-///     sub-element influences caused artifacts. In 3.7 when the subsurface (SSLT)
-///     feature was added a special conditional existed which set both values to
-///     0.0. Currently a 0.0 value is used for all but the returned intersection
-///     where @ref MIN_ISECT_DEPTH is now used. In testing all worked with 0.0, but
-///     there is a performance hit to returning all >0.0 intersections. For example,
-///     internal refelections at distances which must be ignored in downstream code.
+/// Currently set to @ref MIN_ISECT_DEPTH_RETURNED.
 ///
-const DBL DEPTH_TOLERANCE = MIN_ISECT_DEPTH;
+/// @ref DEPTH_TOLERANCE since v1.0 was 1.0e-2. Further, the value was used for
+/// both minimum returned root depth and as the 'mindist' in all of the
+/// determine_influences()'s intersect_<> functions. The latter likely done
+/// to help the initial, and long not used, solve_quartic() function. In any
+/// case, the 1.0e-2 value causes artifacts.
+///
+/// In v3.7 the subsurface (SSLT) feature added a special conditional to set
+/// both values to 0.0 which worked without issue. Currently this 0.0 value is
+/// used for all but the returned intersection where @ref
+/// MIN_ISECT_DEPTH_RETURNED now used.
+///
+const DBL DEPTH_TOLERANCE = MIN_ISECT_DEPTH_RETURNED;
 
-/// @def INSIDE_TOLERANCE
-/// Density tolerance for inside test.
+/// @var INSIDE_TOLERANCE
+/// const DBL density tolerance for inside test.
 ///
-/// @note
-///     Value for @ref INSIDE_TOLERANCE was since v1.0 set to 1.0e-6 which is a good
-///     value if running single floats. With double floats a value of 1e-15 is better.
-///     This is an offset to the outside of the 0.0 density surface after the blob
-///     threshold is subtracted. Now using C++ standard's DBL_DIG macro to set.
+/// Currently set to @ref POV_DBL_EPSILON.
 ///
-const DBL INSIDE_TOLERANCE = ((DBL)1.0/pow((DBL)10.0,(DBL)DBL_DIG));
+/// @ref INSIDE_TOLERANCE was since v1.0 set to 1.0e-6 which is a good value if
+/// running single floats. With double floats much smaller is better as this is
+/// an offset to the outside of the 0.0 density surface after the blob threshold
+/// is subtracted.
+///
+const DBL INSIDE_TOLERANCE = POV_DBL_EPSILON;
 
 /* Ray enters/exits a component. */
 const int ENTERING = 0;

@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2017 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -55,6 +55,19 @@ class RenderStatistics;
 * Global preprocessor defines
 ******************************************************************************/
 
+/// @def MAX_ORDER
+/// Maximum supported polynomial order.
+///
+/// @todo
+///     This currently carries a large, fixed per polysolve() call
+///     memory allocation on the stack. Size is on the order of
+///     (MAX_ORDER+1)*int + PRECISE_FLOAT * (MAX_ORDER+1)^2
+///     which impacts performance and performance stability especially
+///     for threads > cores. Allocation based on current equation order
+///     would be better. My C++ attempts at this all badly slower. C itself
+///     supports a struct "flexible array member" feature, however this
+///     not a C++11 standard though some C++ compilers support it.
+///
 #define MAX_ORDER 35
 
 
