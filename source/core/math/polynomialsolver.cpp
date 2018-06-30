@@ -1544,8 +1544,8 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     //---
     // Reverse coefficients into order used herein.
     // Drop any leading original order coefficients meaningfully 0.0.
-    // Set any remaining coefficients meaningfully 0.0 to exactly 0.0.
-    //
+    // (Commented below) Set any remaining coefficients meaningfully 0.0 to exactly 0.0.
+
     np = 0;
     for (i = 0; i <= order; i++)
     {
@@ -1556,14 +1556,14 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
         else
         {
             potentialLeadingZero = false;
-            if (fabs(Coeffs[i]) < POV_DBL_EPSILON)
-            {
-                sseq[0].coef[order-i] = (PRECISE_FLOAT)0.0;
-            }
-            else
-            {
+          //if (fabs(Coeffs[i]) < POV_DBL_EPSILON)
+          //{
+          //    sseq[0].coef[order-i] = (PRECISE_FLOAT)0.0;
+          //}
+          //else
+          //{
                 sseq[0].coef[order-i] = (PRECISE_FLOAT)Coeffs[i];
-            }
+          //}
         }
     }
     order -= np;
@@ -1580,7 +1580,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     //---
     // Build the Sturm sequence
-    //
+
     np = buildsturm(order, &sseq[0]);
 
     //---
@@ -1588,7 +1588,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     // NOTE: Changed to <=0 test over ==0 due sphere_sweep b_spline
     // going negative when the modp leading coef filter set lower.
     // Similar change to the numchanges based test below.
-    //
+
     if ((nroots = visible_roots(np, sseq)) <= 0)
     {
         return(0);
@@ -1596,7 +1596,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     //---
     // Bracket the roots
-    //
+
     min_value = 0.0;
     max_value = MAX_DISTANCE;
 
@@ -1608,7 +1608,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     //    Cohen, Alan M. (2009). "Bounds for the roots of polynomial equations".
     //    Mathematical Gazette. 93: 87-88.
     // NOTE: Had to use > 1.0 in max_value2 calculation in practice...
-    //
+
     Abs_Coeff_n = fabs(Coeffs[0]); // Leading zeros dropped above.
     max_value2  = 1.1 + fabs(Coeffs[1]/Abs_Coeff_n);
     max_value   = fabs(Coeffs[2]);
@@ -1623,7 +1623,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     // Perhaps related to how the sturm chain is pruned in modp(). Until sorted adding
     // the following sanity check which restores a MAX_DISTANCE upper bound where
     // root(s) exists above estimated upper bound.
-    //
+
     atmin = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
     atmax = numchanges(np, sseq, (PRECISE_FLOAT)MAX_DISTANCE);
     if ((atmin - atmax) != 0)
@@ -1643,10 +1643,39 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
         return(0);
     }
 
-    // perform the bisection.
-    //
-    return(sbisect(np, sseq, (PRECISE_FLOAT)min_value, (PRECISE_FLOAT)max_value,
-           atmin, atmax, roots));
+    // Perform the bisection.
+
+    nroots = sbisect(np, sseq, (PRECISE_FLOAT)min_value, (PRECISE_FLOAT)max_value,
+             atmin, atmax, roots);
+
+    // Newton Raphson root polishing step. Using SMALL_ENOUGH value currently
+    // to limit to one pass, but could try for more accuracy if need be.
+    // See similar code in solve_quartic for additional comment.
+
+    DBL pv, dpv, t, dt;
+    for (int c = 0; c < nroots; c++)
+    {
+        t = roots[c];
+        for (int j = 0; j < 7; j++)
+        {
+            pv  = sseq[0].coef[order] * t + sseq[0].coef[order-1];
+            dpv = sseq[0].coef[order];
+            for (int k=order-2; k>=0; k--)
+            {
+                dpv = dpv * t + pv;
+                pv  = pv * t + sseq[0].coef[k];
+            }
+
+            dt = pv / dpv;
+            t -= dt;
+            if (fabs(dt) < SMALL_ENOUGH)
+            {
+                roots[c] = t;
+                break;
+            }
+        }
+    }
+    return(nroots);
 }
 
 
