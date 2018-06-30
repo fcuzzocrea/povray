@@ -85,6 +85,15 @@ const DBL FUDGE_FACTOR2 = -1.0e-5;
 ///
 const DBL FUDGE_FACTOR3 = 1.0e-7;
 
+/// @var FUDGE_FACTOR4
+/// @brief const DBL value used in the active solve_quartic() function.
+///
+/// Roughly acts as @ref FUDGE_FACTOR2 and @ref FUDGE_FACTOR3 did for the
+/// original solve_quartic() versions but for the current solve_quartic() code.
+/// Value arrived at by running many scenes and settling on what worked best.
+///
+const DBL FUDGE_FACTOR4 = 1.0e-8;
+
 /// @var TWO_M_PI_3
 /// const DBL value used in solve_cubic() equal to 2.0 * pi / 3.0.
 ///
@@ -1391,7 +1400,7 @@ static int solve_quartic(const DBL *x, DBL *results)
 
     if (d1 < 0.0)
     {
-        if (d1 > -SMALL_ENOUGH)
+        if (d1 > -FUDGE_FACTOR4)
         {
             d1 = 0.0;
         }
@@ -1401,7 +1410,7 @@ static int solve_quartic(const DBL *x, DBL *results)
         }
     }
 
-    if (d1 < SMALL_ENOUGH)
+    if (d1 < FUDGE_FACTOR4)
     {
         d2 = z * z - r;
 
@@ -1458,6 +1467,38 @@ static int solve_quartic(const DBL *x, DBL *results)
             p = sqrt(p);
             results[i++] = 0.5 * (d1 + p) + q2;
             results[i++] = 0.5 * (d1 - p) + q2;
+        }
+    }
+
+    // The quartic root finding method above somewhat inaccurate and more so at
+    // large scales. The follow code polishes the found roots so, for example,
+    // negative roots which otherwise drift positive and cause artifacts are
+    // corrected. A reason for the historically too large 1e-2 minimum intersection
+    // depth used with blobs that itself caused artifacts of other kinds. Further,
+    // the blob 1e-2 value was not large enough to filter all drift to 0+ roots in
+    // any case. Newton-Raphson method.
+    //
+    DBL pv, dpv, t, dt;
+    for (int c = 0; c < i; c++)
+    {
+        t = results[c];
+        for (int j = 0; j < 7; j++)
+        {
+            pv  = x[0] * t + x[1];
+            dpv = x[0];
+            for (int k=2; k<=4; k++)
+            {
+                dpv = dpv * t + pv;
+                pv  = pv * t + x[k];
+            }
+
+            dt = pv / dpv;
+            t -= dt;
+            if (fabs(dt) < SMALL_ENOUGH)
+            {
+                results[c] = t;
+                break;
+            }
         }
     }
 
