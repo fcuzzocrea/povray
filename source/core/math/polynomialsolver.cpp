@@ -153,11 +153,7 @@ const PRECISE_FLOAT RELERROR = (PRECISE_FLOAT)1.0e-12;
 /// @var SMALL_ENOUGH
 /// const @ref DBL value used to filter determinant value in older
 /// solve_quadratic() in an unusual way causing artifacts. Used too in
-/// solve_quartic() to filter values ahead of the trailing quadratics.
-///
-/// @todo
-///     Suspect value is larger than it should really be and very likely should
-///     not be used at all in solve_quartic() as it is.
+/// solve_quartic() and polysolve() for root polishing threshold.
 ///
 const DBL SMALL_ENOUGH = 1.0e-10;
 
