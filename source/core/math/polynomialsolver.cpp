@@ -50,7 +50,7 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/// @var FUDGE_FACTOR2
+/// @var kSolveQuarticV1_Factor2
 /// @brief const DBL value defining how close quartic equation is to being a square
 /// of a quadratic.
 ///
@@ -59,18 +59,18 @@ namespace pov
 ///     you will get spurious roots.
 ///
 /// @attention
-///     Used only in the old unused version of solve_quartic().
-//      In other words not used.
+///     Used only in the old unused first version of solve_quartic().
 ///
-const DBL FUDGE_FACTOR2 = -1.0e-5;
+const DBL kSolveQuarticV1_Factor2 = -1.0e-5;
 
-/// @var FUDGE_FACTOR3
-/// @brief const DBL value similar to @ref FUDGE_FACTOR2 at a later stage of the
-/// algebraic solver.
+/// @var kSolveQuarticV1_Factor3
+/// @brief const DBL value similar to @ref kSolveQuarticV1_Factor2 at a later
+/// stage of the algebraic solver.
 ///
-/// @ref FUDGE_FACTOR2 and @ref FUDGE_FACTOR3 have been defined so that quartic
-/// equations will properly render on fpu/compiler combinations that only have
-/// 64 bit IEEE precision. Do not arbitrarily change any of these values.
+/// @ref kSolveQuarticV1_Factor2 and @ref kSolveQuarticV1_Factor3 have been
+/// defined so that quartic equations will properly render on fpu/compiler
+/// combinations that only have 64 bit IEEE precision. Do not arbitrarily change
+/// any of these values.
 ///
 /// If you have a machine with a proper fpu/compiler combo - like a Mac with a
 /// 68881, then use the native floating format (96 bits) and tune the values for
@@ -80,40 +80,39 @@ const DBL FUDGE_FACTOR2 = -1.0e-5;
 /// Multiply Add instructions, etc.
 ///
 /// @attention
-///     Used only in the old unused version of solve_quartic().
-//      In other words not used.
+///     Used only in the old unused first version of solve_quartic().
 ///
-const DBL FUDGE_FACTOR3 = 1.0e-7;
+const DBL kSolveQuarticV1_Factor3 = 1.0e-7;
 
-/// @var FUDGE_FACTOR4
+/// @var kSolveQuarticV2_Factor4
 /// @brief const DBL value used in the active solve_quartic() function.
 ///
-/// Roughly acts as @ref FUDGE_FACTOR2 and @ref FUDGE_FACTOR3 did for the
-/// original solve_quartic() versions but for the current solve_quartic() code.
-/// Value arrived at by running many scenes and settling on what worked best.
+/// Roughly acts as @ref kSolveQuarticV1_Factor2 and @ref
+/// kSolveQuarticV1_Factor3 did for the original solve_quartic() versions,
+/// but for the current solve_quartic() code.
 ///
-const DBL FUDGE_FACTOR4 = 1.0e-8;
+const DBL kSolveQuarticV2_Factor4 = 1.0e-5;
 
-/// @var TWO_M_PI_3
+/// @var kSolveCubic_2MultPiDiv3
 /// const DBL value used in solve_cubic() equal to 2.0 * pi / 3.0.
 ///
-const DBL TWO_M_PI_3  = 2.0943951023931954923084;
+const DBL kSolveCubic_2MultPiDiv3  = 2.0943951023931954923084;
 
-/// @var FOUR_M_PI_3
+/// @var kSolveCubic_4MultPiDiv3
 /// const DBL value used in solve_cubic() equal to 4.0 * pi / 3.0.
 ///
-const DBL FOUR_M_PI_3 = 4.1887902047863909846168;
+const DBL kSolveCubic_4MultPiDiv3 = 4.1887902047863909846168;
 
-/// @var MAX_ITERATIONS
+/// @var kMaxIterations
 /// const int max number of polysolve sturm chain based bisections.
 ///
 /// @note
 ///     regula_falsa() uses twice this value internally as it can be
 ///     quite slow to converge in the worst case.
 ///
-const int MAX_ITERATIONS = 65;
+const int kMaxIterations = 65;
 
-/// @var SBISECT_MULT_ROOT_THRESHOLD
+/// @var kSbisectMultRootThreshold
 /// const @ref PRECISE_FLOAT value below which multiple roots ignored in sturm
 /// chained based bisection and a single root at the middle of the current
 /// interval is returned.
@@ -124,9 +123,9 @@ const int MAX_ITERATIONS = 65;
 ///     tripped in sphere_sweep polynomials where the roots frequently collapse
 ///     inward due equation set up.
 ///
-const PRECISE_FLOAT SBISECT_MULT_ROOT_THRESHOLD = (PRECISE_FLOAT)1e-6;
+const PRECISE_FLOAT kSbisectMultRootThreshold = (PRECISE_FLOAT)1e-6;
 
-/// @var REGULA_FALSA_THRESHOLD
+/// @var kRegulaFalsaThreshold
 /// const @ref PRECISE_FLOAT threshold below which regula_falsa function is tried
 /// when there is a single root.
 ///
@@ -142,20 +141,19 @@ const PRECISE_FLOAT SBISECT_MULT_ROOT_THRESHOLD = (PRECISE_FLOAT)1e-6;
 ///     Initial setting 1.0 can likely be tuned for better performance trading off
 ///     bisection against regula_falsa.
 ///
-const PRECISE_FLOAT REGULA_FALSA_THRESHOLD = (PRECISE_FLOAT)1.0;
+const PRECISE_FLOAT kRegulaFalsaThreshold = (PRECISE_FLOAT)1.0;
 
-/// @var RELERROR
+/// @var kRelativeError
 /// const @ref PRECISE_FLOAT smallest relative error along the ray when using
 /// the polysolve(), sturm chain bisection / regula-falsi method.
 ///
-const PRECISE_FLOAT RELERROR = (PRECISE_FLOAT)1.0e-12;
+const PRECISE_FLOAT kRelativeError = (PRECISE_FLOAT)1.0e-12;
 
-/// @var SMALL_ENOUGH
+/// @var kSolveQuadratic_SmallEnough
 /// const @ref DBL value used to filter determinant value in older
-/// solve_quadratic() in an unusual way causing artifacts. Used too in
-/// solve_quartic() and polysolve() for root polishing threshold.
+/// solve_quadratic() in an unusual way causing artifacts.
 ///
-const DBL SMALL_ENOUGH = 1.0e-10;
+const DBL kSolveQuadratic_SmallEnough = 1.0e-10;
 
 /*****************************************************************************
 * Local typedefs
@@ -506,7 +504,7 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
     PRECISE_FLOAT mid;
     int n1, n2, its, atmid;
 
-    if (((atmin - atmax) == 1) && ((max_value - min_value) < REGULA_FALSA_THRESHOLD))
+    if (((atmin - atmax) == 1) && ((max_value - min_value) < kRegulaFalsaThreshold))
     {
         /* first try using regula-falsa to find the root.  */
 
@@ -518,7 +516,7 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
         {
             /* That failed, so now find it by bisection */
 
-            for (its = 0; its < MAX_ITERATIONS; its++)
+            for (its = 0; its < kMaxIterations; its++)
             {
                 mid = (min_value + max_value) / (PRECISE_FLOAT)2.0;
 
@@ -532,9 +530,9 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
                     return(0);
                 }
 
-                if (PRECISE_FABS(mid) > RELERROR)
+                if (PRECISE_FABS(mid) > kRelativeError)
                 {
-                    if (PRECISE_FABS((max_value - min_value) / mid) < RELERROR)
+                    if (PRECISE_FABS((max_value - min_value) / mid) < kRelativeError)
                     {
                         roots[0] = (DBL)mid;
 
@@ -543,7 +541,7 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
                 }
                 else
                 {
-                    if (PRECISE_FABS(max_value - min_value) < RELERROR)
+                    if (PRECISE_FABS(max_value - min_value) < kRelativeError)
                     {
                         roots[0] = (DBL)mid;
 
@@ -572,7 +570,7 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
     /* There is more than one root in the interval.
        Bisect to find new intervals. */
 
-    for (its = 0; its < MAX_ITERATIONS; its++)
+    for (its = 0; its < kMaxIterations; its++)
     {
         mid = (min_value + max_value) / (PRECISE_FLOAT)2.0;
 
@@ -586,9 +584,9 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
             return(0);
         }
 
-        if (PRECISE_FABS(mid) > RELERROR)
+        if (PRECISE_FABS(mid) > kRelativeError)
         {
-            if (PRECISE_FABS((max_value - min_value) / mid) < RELERROR)
+            if (PRECISE_FABS((max_value - min_value) / mid) < kRelativeError)
             {
                 roots[0] = (DBL)mid;
 
@@ -597,7 +595,7 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
         }
         else
         {
-            if (PRECISE_FABS(max_value - min_value) < RELERROR)
+            if (PRECISE_FABS(max_value - min_value) < kRelativeError)
             {
                 roots[0] = (DBL)mid;
 
@@ -610,7 +608,7 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
 
         if ((n1 != 0) && (n2 != 0))
         {
-            if ((max_value - min_value) < SBISECT_MULT_ROOT_THRESHOLD)
+            if ((max_value - min_value) < kSbisectMultRootThreshold)
             {
                 roots[0] = (DBL)mid;
                 return(1);
@@ -623,13 +621,13 @@ static int sbisect(int np, const polynomial *sseq, PRECISE_FLOAT min_value, PREC
         }
         else
         {
-            if ((n1 == 1) && (n2 == 0) && ((mid - min_value) < REGULA_FALSA_THRESHOLD))
+            if ((n1 == 1) && (n2 == 0) && ((mid - min_value) < kRegulaFalsaThreshold))
             {
                 n1 = sbisect(np, sseq, min_value, mid, atmin, atmid, roots);
 
                 return(n1);
             }
-            if ((n1 == 0) && (n2 == 1) && ((max_value - mid) < REGULA_FALSA_THRESHOLD))
+            if ((n1 == 0) && (n2 == 1) && ((max_value - mid) < kRegulaFalsaThreshold))
             {
                 n2 = sbisect(np, sseq, mid, max_value, atmid, atmax, roots);
 
@@ -746,19 +744,19 @@ static bool regula_falsa(const int order, const PRECISE_FLOAT *coef, PRECISE_FLO
 
     mid = (a + b) / (PRECISE_FLOAT)2.0;
 
-    // NOTE: 2x MAX_ITERATIONS multiplier over sturm bisection requirement found to
+    // NOTE: 2x kMaxIterations multiplier over sturm bisection requirement found to
     // happen in practice. Necessary if you want regula_falsa to find the root
     // where the algorithm converges very slowly.
 
-    for (its = 0; its < (MAX_ITERATIONS * 2); its++)
+    for (its = 0; its < (kMaxIterations * 2); its++)
     {
         x = (fb * a - fa * b) / (fb - fa);
 
         fx = polyeval(x, order, coef);
 
-        if (PRECISE_FABS(mid) > RELERROR)
+        if (PRECISE_FABS(mid) > kRelativeError)
         {
-            if (PRECISE_FABS((b - a) / mid) < RELERROR)
+            if (PRECISE_FABS((b - a) / mid) < kRelativeError)
             {
                 *val = (DBL)mid;
 
@@ -769,7 +767,7 @@ static bool regula_falsa(const int order, const PRECISE_FLOAT *coef, PRECISE_FLO
         }
         else
         {
-            if (PRECISE_FABS(b - a) < RELERROR)
+            if (PRECISE_FABS(b - a) < kRelativeError)
             {
                 *val = (DBL)mid;
 
@@ -951,9 +949,9 @@ static int solve_quadratic(const DBL *x, DBL *y)
     b = -x[1];
     c = x[2];
 
-    if (fabs(a) < SMALL_ENOUGH)
+    if (fabs(a) < kSolveQuadratic_SmallEnough)
     {
-        if (fabs(b) < SMALL_ENOUGH)
+        if (fabs(b) < kSolveQuadratic_SmallEnough)
         {
             return(0);
         }
@@ -974,7 +972,7 @@ static int solve_quadratic(const DBL *x, DBL *y)
     // where supposing infinite numerical accuracy there are two.
     // The cost is bad roots - fuzz / inaccuracy in some results.
 
-    if ((d > -SMALL_ENOUGH) && (d < SMALL_ENOUGH))
+    if ((d > -kSolveQuadratic_SmallEnough) && (d < kSolveQuadratic_SmallEnough))
     {
         y[0] = 0.5 * b / a;
 
@@ -1093,8 +1091,8 @@ static int solve_cubic(const DBL *x, DBL *y)
         sQ = -2.0 * sqrt(Q);
 
         y[0] = sQ * cos(theta) - an;
-        y[1] = sQ * cos(theta + TWO_M_PI_3) - an;
-        y[2] = sQ * cos(theta + FOUR_M_PI_3) - an;
+        y[1] = sQ * cos(theta + kSolveCubic_2MultPiDiv3) - an;
+        y[2] = sQ * cos(theta + kSolveCubic_4MultPiDiv3) - an;
 
         return(3);
     }
@@ -1116,7 +1114,7 @@ static int solve_cubic(const DBL *x, DBL *y)
 }
 
 
-#ifdef TEST_SOLVER
+#if (0)
 /*****************************************************************************
 *
 * FUNCTION
@@ -1240,7 +1238,7 @@ static int solve_quartic(const DBL *x, DBL *results)
 
     if (t1 < 0.0)
     {
-        if (t1 > FUDGE_FACTOR2)
+        if (t1 > kSolveQuarticV1_Factor2)
         {
             t1 = 0.0;
         }
@@ -1252,7 +1250,7 @@ static int solve_quartic(const DBL *x, DBL *results)
          }
      }
 
-    if (t1 < FUDGE_FACTOR3)
+    if (t1 < kSolveQuarticV1_Factor3)
     {
         /* Second special case, the "x" term on the right hand side above
            has vanished.  In this case:
@@ -1396,7 +1394,7 @@ static int solve_quartic(const DBL *x, DBL *results)
 
     if (d1 < 0.0)
     {
-        if (d1 > -FUDGE_FACTOR4)
+        if (d1 > -kSolveQuarticV2_Factor4)
         {
             d1 = 0.0;
         }
@@ -1406,7 +1404,7 @@ static int solve_quartic(const DBL *x, DBL *results)
         }
     }
 
-    if (d1 < FUDGE_FACTOR4)
+    if (d1 < kSolveQuarticV2_Factor4)
     {
         d2 = z * z - r;
 
@@ -1466,33 +1464,59 @@ static int solve_quartic(const DBL *x, DBL *results)
         }
     }
 
-    // The quartic root finding method above somewhat inaccurate and more so at
-    // large scales. The follow code polishes the found roots so, for example,
-    // negative roots which otherwise drift positive and cause artifacts are
-    // corrected. A reason for the historically too large 1e-2 minimum intersection
+    // The quartic root finding method above somewhat inaccurate and amplified
+    // at large scale up. The follow code polishes the found roots so, for example,
+    // <=0.0 roots which otherwise drift positive and cause artifacts are corrected.
+    // This the reason for the historically too large 1e-2 minimum intersection
     // depth used with blobs that itself caused artifacts of other kinds. Further,
-    // the blob 1e-2 value was not large enough to filter all drift to 0+ roots in
-    // any case. Newton-Raphson method.
+    // that blob 1e-2 value was not large enough to filter all drift to 0+ roots in
+    // any case without the polishing below. Newton-Raphson method.
     //
-    DBL pv, dpv, t, dt;
+    PRECISE_FLOAT pv, oldpv, firstpv, dpv, dt, t;
+
+    auto lambdaQuarticPolyValAnDerVal = [&pv,&dpv](const PRECISE_FLOAT t, const DBL *x) -> void
+    {
+         pv  = (PRECISE_FLOAT)x[0] * t + (PRECISE_FLOAT)x[1];
+         dpv = (PRECISE_FLOAT)x[0];
+         for (int k=2; k<=4; k++)
+         {
+              dpv = dpv * t + pv;
+              pv  = pv * t + (PRECISE_FLOAT)x[k];
+         }
+    };
+
     for (int c = 0; c < i; c++)
     {
-        t = results[c];
+        if (results[c] <= 0.0)
+        {
+            continue;
+        }
+        t = (PRECISE_FLOAT)results[c];
+        lambdaQuarticPolyValAnDerVal(t,&x[0]);
+        firstpv = pv;
+
         for (int j = 0; j < 7; j++)
         {
-            pv  = x[0] * t + x[1];
-            dpv = x[0];
-            for (int k=2; k<=4; k++)
+            if (dpv == 0.0)
             {
-                dpv = dpv * t + pv;
-                pv  = pv * t + x[k];
+               break;
             }
-
+            else if (pv == 0.0)
+            {
+                results[c] = (DBL)t;
+                break;
+            }
             dt = pv / dpv;
             t -= dt;
-            if (fabs(dt) < SMALL_ENOUGH)
+
+            lambdaQuarticPolyValAnDerVal(t,&x[0]);
+
+            if (PRECISE_FABS(dt) < MIN_ISECT_DEPTH_RETURNED)
             {
-                results[c] = t;
+                if (PRECISE_FABS(pv) < PRECISE_FABS(firstpv))
+                {
+                    results[c] = (DBL)t;
+                }
                 break;
             }
         }
@@ -1576,7 +1600,6 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     //---
     // Build the Sturm sequence
-
     np = buildsturm(order, &sseq[0]);
 
     //---
@@ -1592,7 +1615,6 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
     //---
     // Bracket the roots
-
     min_value = 0.0;
     max_value = MAX_DISTANCE;
 
@@ -1640,37 +1662,57 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     }
 
     // Perform the bisection.
-
     nroots = sbisect(np, sseq, (PRECISE_FLOAT)min_value, (PRECISE_FLOAT)max_value,
              atmin, atmax, roots);
 
-    // Newton Raphson root polishing step. Using SMALL_ENOUGH value currently
-    // to limit to one pass, but could try for more accuracy if need be.
-    // See similar code in solve_quartic for additional comment.
+    // Newton Raphson root polishing step.
+    PRECISE_FLOAT pv, firstpv, dpv, dt, t;
 
-    DBL pv, dpv, t, dt;
+    auto lambdaPolysolvePolyValAnDerVal = [&pv,&dpv]
+         (const int ord, const PRECISE_FLOAT t, const polynomial *sseq) -> void
+    {
+         pv  = (PRECISE_FLOAT)sseq[0].coef[ord] * t + (PRECISE_FLOAT)sseq[0].coef[ord-1];
+         dpv = (PRECISE_FLOAT)sseq[0].coef[ord];
+         for (int k=ord-2; k>=0; k--)
+         {
+              dpv = dpv * t + pv;
+              pv  = pv * t + (PRECISE_FLOAT)sseq[0].coef[k];
+         }
+    };
+
     for (int c = 0; c < nroots; c++)
     {
-        t = roots[c];
+        t = (PRECISE_FLOAT)roots[c];
+        lambdaPolysolvePolyValAnDerVal(order,t,&sseq[0]);
+        firstpv = pv;
+
         for (int j = 0; j < 7; j++)
         {
-            pv  = sseq[0].coef[order] * t + sseq[0].coef[order-1];
-            dpv = sseq[0].coef[order];
-            for (int k=order-2; k>=0; k--)
+            if (dpv == 0.0)
             {
-                dpv = dpv * t + pv;
-                pv  = pv * t + sseq[0].coef[k];
+               break;
             }
-
+            else if (pv == 0.0)
+            {
+                roots[c] = (DBL)t;
+                break;
+            }
             dt = pv / dpv;
             t -= dt;
-            if (fabs(dt) < SMALL_ENOUGH)
+
+            lambdaPolysolvePolyValAnDerVal(order,t,&sseq[0]);
+
+            if (PRECISE_FABS(dt) < MIN_ISECT_DEPTH_RETURNED)
             {
-                roots[c] = t;
+                if (PRECISE_FABS(pv) < PRECISE_FABS(firstpv))
+                {
+                    roots[c] = (DBL)t;
+                }
                 break;
             }
         }
     }
+
     return(nroots);
 }
 
