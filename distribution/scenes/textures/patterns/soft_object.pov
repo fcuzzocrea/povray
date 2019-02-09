@@ -9,9 +9,8 @@
 //
 // +w450 +h300 -a0.3     // +a0.3 takes approx 5x longer
 
-#version 3.72;
+#version 3.8;
 global_settings { assumed_gamma 1 }
-#default { finish {ambient 0.005 diffuse 0.45} }
 #declare Grey50 = srgbft <0.5,0.5,0.5,0,0>;
 background { color Grey50 }
 #declare Camera00 = camera {
