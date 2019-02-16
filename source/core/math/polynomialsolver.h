@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -70,12 +70,35 @@ class RenderStatistics;
 ///
 #define MAX_ORDER 35
 
+/// @todo
+///     With the elimination of the Solve_Polynomial wrapper we are no longer
+///     setting stats[Polynomials_Tested] and stats[Roots_Eliminated]. Note both
+///     long inaccurate. The first never capturing anything close to the actual
+///     polynomials solved for roots. Rather only calls to Solve_Polynomial. The
+///     roots eliminated value was entirely inaccurate with respect to roots
+///     eliminated and rather reflected one of a few ways coefficients were
+///     being changed ahead of the actual solver work. Currently leaving the
+///     stats infrastructure there with the thought both could be restored more
+///     accurately, but truthfully doubt there would ever be any actual value to
+///     users or developers.
+///
+
+/// @remark
+///     The coefficient order for the polynomial when calling any function defined
+///     herein is:
+///
+///         c[0] * x ^ n + c[1] * x ^ (n-1) + ... + c[n-1] * x + c[n] = 0
+///
 
 /*****************************************************************************
 * Global functions
 ******************************************************************************/
 
-int Solve_Polynomial (int n, const DBL *c, DBL *r, int sturm, DBL epsilon, RenderStatistics& stats);
+int polysolve (int order, const DBL *Coeffs, DBL *roots,
+               DBL HandleCollapsedRootsValue, DBL MaxBound);
+int solve_quadratic (const DBL *x, DBL *y);
+int solve_cubic (const DBL *x, DBL *y);
+int solve_quartic (const DBL *x, DBL *y);
 
 /// @}
 ///

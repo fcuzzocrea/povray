@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -80,13 +80,6 @@
 namespace pov
 {
 
-/*****************************************************************************
-* Local preprocessor defines
-******************************************************************************/
-
-
-
-
 void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
                                   DBL * Depth1, DBL * Depth2, DBL * Depth3,
                                   DBL * Depth4, DBL * Depth5, DBL * Depth6,
@@ -113,12 +106,12 @@ void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
 
     t_Closest_Approach = dot(Padj, D);
 
-    if ((OCSquared < Rad1) || (t_Closest_Approach > EPSILON))
+    if ((OCSquared < Rad1) || (t_Closest_Approach > gkDBL_epsilon))
     {
 
         t_Half_Chord_Squared = Rad1 - OCSquared + Sqr(t_Closest_Approach);
 
-        if (t_Half_Chord_Squared > EPSILON)
+        if (t_Half_Chord_Squared > gkDBL_epsilon)
         {
             Half_Chord = sqrt(t_Half_Chord_Squared);
 
@@ -146,12 +139,12 @@ void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
 
     t_Closest_Approach = dot(Padj, D);
 
-    if ((OCSquared < Rad2) || (t_Closest_Approach > EPSILON))
+    if ((OCSquared < Rad2) || (t_Closest_Approach > gkDBL_epsilon))
     {
 
         t_Half_Chord_Squared = Rad2 - OCSquared + Sqr(t_Closest_Approach);
 
-        if (t_Half_Chord_Squared > EPSILON)
+        if (t_Half_Chord_Squared > gkDBL_epsilon)
         {
             Half_Chord = sqrt(t_Half_Chord_Squared);
 
@@ -196,7 +189,15 @@ void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
 
     c[4] = k1 * k1 + 4.0 * R2 * (Py2 - r2);
 
-    n = Solve_Polynomial(4, c, r, Test_Flag(this, STURM_FLAG), RootTolerance, Thread->Stats());
+    if (Test_Flag(this, STURM_FLAG))
+    {
+        n = polysolve(4, c, r, 0.0, 0.0);
+    }
+    else
+    {
+        n = solve_quartic(c, r);
+    }
+
     while (n--)
     {
         // here we only keep the 'lemon' inside the torus
@@ -205,6 +206,11 @@ void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
         //   (x + r)^2 + y^2 = R^2 around y (so replacing x by sqrt(x^2+z^2))
         // with something which is faster than a 4th degree polynome,
         // please feel welcome to update and share...
+
+        if ((r[n] <= gkMinIsectDepthReturned) || (r[n] >= MAX_DISTANCE))
+        {
+            continue;
+        }
 
         IPoint = P + r[n] * D;
 
@@ -277,7 +283,8 @@ bool Ovus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 
     Intersect_Ovus_Spheres(P, D, &Depth1, &Depth2, &Depth3,
                            &Depth4, &Depth5, &Depth6, Thread);
-    if (Depth1 > EPSILON)
+
+    if (Depth1 > gkMinIsectDepthReturned)
     {
         IPoint = P + Depth1 * D;
         if (IPoint[Y] < BottomVertical)
@@ -294,7 +301,7 @@ bool Ovus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
         }
     }
 
-    if (Depth2 > EPSILON)
+    if (Depth2 > gkMinIsectDepthReturned)
     {
         IPoint = P + Depth2 * D;
 
@@ -312,7 +319,7 @@ bool Ovus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
         }
     }
 
-    if (Depth3 > EPSILON)
+    if (Depth3 > gkMinIsectDepthReturned)
     {
         IPoint = P + Depth3 * D;
 
@@ -331,7 +338,8 @@ bool Ovus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
             }
         }
     }
-    if (Depth4 > EPSILON)
+
+    if (Depth4 > gkMinIsectDepthReturned)
     {
         IPoint = P + Depth4 * D;
 
@@ -351,7 +359,7 @@ bool Ovus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
         }
     }
 
-    if (Depth5 > EPSILON)
+    if (Depth5 > gkMinIsectDepthReturned)
     {
         IPoint = P + Depth5 * D;
         MTransPoint(Real_Pt, IPoint, Trans);
@@ -371,7 +379,8 @@ bool Ovus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
             Found = true;
         }
     }
-    if (Depth6 > EPSILON)
+
+    if (Depth6 > gkMinIsectDepthReturned)
     {
         IPoint = P + Depth6 * D;
         MTransPoint(Real_Pt, IPoint, Trans);

@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -59,19 +59,6 @@
 
 namespace pov
 {
-
-/*****************************************************************************
-* Local preprocessor defines
-******************************************************************************/
-
-/* Minimal depth for a valid intersection. */
-
-const DBL DEPTH_TOLERANCE = 1.0e-4;
-
-/* Tolerance used for order reduction during root finding. */
-
-const DBL ROOT_TOLERANCE = 1.0e-4;
-
 
 //******************************************************************************
 
@@ -133,16 +120,13 @@ bool Torus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
     {
         for (i = 0; i < max_i; i++)
         {
-            if ((Depth[i] > DEPTH_TOLERANCE) && (Depth[i] < MAX_DISTANCE))
+            IPoint = ray.Evaluate(Depth[i]);
+
+            if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
             {
-                IPoint = ray.Evaluate(Depth[i]);
+                Depth_Stack->push(Intersection(Depth[i], IPoint, this));
 
-                if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
-                {
-                    Depth_Stack->push(Intersection(Depth[i], IPoint, this));
-
-                    Found = true;
-                }
+                Found = true;
             }
         }
     }
@@ -162,27 +146,24 @@ bool SpindleTorus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceT
     {
         for (i = 0; i < max_i; i++)
         {
-            if ((Depth[i] > DEPTH_TOLERANCE) && (Depth[i] < MAX_DISTANCE))
+            IPoint = ray.Evaluate(Depth[i]);
+
+            if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
             {
-                IPoint = ray.Evaluate(Depth[i]);
+                // To test whether the point is on the spindle,
+                // we test whether it is inside a sphere around the origin going through the spindle's tips.
 
-                if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
+                Vector3d P;
+                MInvTransPoint(P, IPoint, Trans);
+                bool onSpindle = (P.lengthSqr() < mSpindleTipYSqr);
+
+                bool validIntersection = (onSpindle ? (mSpindleMode & SpindleVisible)
+                                                    : (mSpindleMode & NonSpindleVisible));
+
+                if (validIntersection)
                 {
-                    // To test whether the point is on the spindle,
-                    // we test whether it is inside a sphere around the origin going through the spindle's tips.
-
-                    Vector3d P;
-                    MInvTransPoint(P, IPoint, Trans);
-                    bool onSpindle = (P.lengthSqr() < mSpindleTipYSqr);
-
-                    bool validIntersection = (onSpindle ? (mSpindleMode & SpindleVisible)
-                                                        : (mSpindleMode & NonSpindleVisible));
-
-                    if (validIntersection)
-                    {
-                        Depth_Stack->push(Intersection(Depth[i], IPoint, this, P, onSpindle));
-                        Found = true;
-                    }
+                    Depth_Stack->push(Intersection(Depth[i], IPoint, this, P, onSpindle));
+                    Found = true;
                 }
             }
         }
@@ -232,7 +213,7 @@ bool SpindleTorus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceT
 int Torus::Intersect(const BasicRay& ray, DBL *Depth, TraceThreadData *Thread) const
 {
     int i, n;
-    DBL len, R2, Py2, Dy2, PDy2, k1, k2;
+    DBL len, R2, Py2, Dy2, PDy2, k1, k2, rootDepth;
     DBL y1, y2, r1, r2;
     DBL c[5];
     DBL r[4];
@@ -274,9 +255,24 @@ int Torus::Intersect(const BasicRay& ray, DBL *Depth, TraceThreadData *Thread) c
         Thread->Stats()[Torus_Bound_Tests_Succeeded]++;
 #endif
 
+        // @todo Look to remove the optimization below. It's true the rays origin
+        // being nearer eventual surface intersection normalizes the polynomial
+        // values returned on evaluation. However, after recent solver improvements
+        // values are less often used to determine intersections directly. Further,
+        // the optimization below was never a general one in that it handled only
+        // the P far away cases and not secondary rays where the torus itself might
+        // create "long" rays to itself. It also didn't handle cases where the distances
+        // might be dimensionally really small in the solver space. Probably the
+        // optimization isn't any longer needed, but if so, look to normalize using
+        // the coefficient values so to normalize the returned values more generally.
+        // Cost with improved versions of solvers:
+        //    solve_quartic calls +1.30%
+        //    polysolve calls     +0.25%
+
         // Move P close to bounding sphere to have more precise root calculation.
         // Bounding sphere radius is R + r, we add r once more to ensure
         // that P is safely outside sphere.
+
         BoundingSphereRadius = MajorRadius + MinorRadius + MinorRadius;
         DistanceP = P.lengthSqr(); // Distance is currently squared.
         Closer = 0.0;
@@ -307,10 +303,33 @@ int Torus::Intersect(const BasicRay& ray, DBL *Depth, TraceThreadData *Thread) c
 
         c[4] = k1 * k1 + 4.0 * R2 * (Py2 - r2);
 
-        n = Solve_Polynomial(4, c, r, Test_Flag(this, STURM_FLAG), ROOT_TOLERANCE, Thread->Stats());
+        if (Test_Flag(this, STURM_FLAG))
+        {
+            n = polysolve(4, c, r, 0.0, 0.0);
+        }
+        else
+        {
+            n = solve_quartic(c, r);
+        }
 
         while(n--)
-            Depth[i++] = (r[n] + Closer) / len;
+        {
+            // In scaled solver numerical space filter to numerical accuracy
+
+            if ((r[n] <= gkMinIsectDepthReturned) || (r[n] >= MAX_DISTANCE))
+            {
+                continue;
+            }
+
+            rootDepth = (r[n] + Closer) / len;
+
+            // Filter again in root scale restored, numerically representable, space.
+
+            if ((rootDepth > gkDBL_epsilon) && (rootDepth < MAX_DISTANCE))
+            {
+                Depth[i++] = rootDepth;
+            }
+        }
     }
 
     if (i)
@@ -459,7 +478,7 @@ void Torus::Normal(Vector3d& Result, Intersection *Inter, TraceThreadData *Threa
 
     dist = sqrt(P[X] * P[X] + P[Z] * P[Z]);
 
-    if (dist > EPSILON)
+    if (dist > gkDBL_epsilon)
     {
         M[X] = MajorRadius * P[X] / dist;
         M[Y] = 0.0;
@@ -492,7 +511,7 @@ void SpindleTorus::Normal(Vector3d& Result, Intersection *Inter, TraceThreadData
 
     dist = sqrt(P[X] * P[X] + P[Z] * P[Z]);
 
-    if (dist > EPSILON)
+    if (dist > gkDBL_epsilon)
     {
         M[X] = MajorRadius * P[X] / dist;
         M[Y] = 0.0;
@@ -925,7 +944,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
     DBL a, b, c, d;
     DBL u, v, k, r, h;
 
-    if (fabs(D[Y]) < EPSILON)
+    if (fabs(D[Y]) < gkDBL_epsilon)
     {
         if ((P[Y] < h1) || (P[Y] > h2))
         {
@@ -941,7 +960,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
         u = P[X] + k * D[X];
         v = P[Z] + k * D[Z];
 
-        if ((k > EPSILON) && (k < MAX_DISTANCE))
+        if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
         {
             r = u * u + v * v;
 
@@ -958,7 +977,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
         u = P[X] + k * D[X];
         v = P[Z] + k * D[Z];
 
-        if ((k > EPSILON) && (k < MAX_DISTANCE))
+        if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
         {
             r = u * u + v * v;
 
@@ -971,7 +990,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
     a = D[X] * D[X] + D[Z] * D[Z];
 
-    if (a > EPSILON)
+    if (a > gkDBL_epsilon)
     {
         /* Intersect with outer cylinder. */
 
@@ -987,7 +1006,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b + d) / a;
 
-            if ((k > EPSILON) && (k < MAX_DISTANCE))
+            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
             {
                 h = P[Y] + k * D[Y];
 
@@ -999,7 +1018,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b - d) / a;
 
-            if ((k > EPSILON) && (k < MAX_DISTANCE))
+            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
             {
                 h = P[Y] + k * D[Y];
 
@@ -1022,7 +1041,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b + d) / a;
 
-            if ((k > EPSILON) && (k < MAX_DISTANCE))
+            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
             {
                 h = P[Y] + k * D[Y];
 
@@ -1034,7 +1053,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b - d) / a;
 
-            if ((k > EPSILON) && (k < MAX_DISTANCE))
+            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
             {
                 h = P[Y] + k * D[Y];
 

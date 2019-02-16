@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -358,7 +358,7 @@ bool Parametric::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThr
         }
     }
 
-    if (TResult < Depth2)
+    if ((TResult < Depth2) && (TResult > 0.0))
     {
         Thread->Stats()[Ray_Parametric_Tests_Succeeded]++;
         IPoint = ray.Direction * TResult;

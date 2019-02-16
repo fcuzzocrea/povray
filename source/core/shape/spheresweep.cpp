@@ -13,7 +13,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -99,7 +99,6 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-const DBL DEPTH_TOLERANCE       = 1.0e-6;
 const DBL ZERO_TOLERANCE        = 1.0e-4;
 const DBL RADIUS_TOLERANCE      = 1.0e-6;
 
@@ -181,6 +180,7 @@ bool SphereSweep::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceTh
     {
         New_Ray.Origin = ray.Origin;
         New_Ray.Direction = ray.Direction;
+        len = 1.0;
     }
     else
     {
@@ -232,19 +232,18 @@ bool SphereSweep::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceTh
         // Push valid intersections
         for (i = 0; i < Num_Isect; i++)
         {
-            // Was the ray transformed?
-            if (Trans != nullptr)
+            if((Isect[i].t > gkMinIsectDepthReturned) && (Isect[i].t < MAX_DISTANCE))
             {
-                // Yes, invert the transformation
-                Isect[i].t /= len;
-                MTransPoint(Isect[i].Point, Isect[i].Point, Trans);
-                MTransNormal(Isect[i].Normal, Isect[i].Normal, Trans);
-                Isect[i].Normal.normalize();
-            }
+                // Was the ray transformed?
+                if (Trans != nullptr)
+                {
+                    // Yes, invert the transformation
+                    Isect[i].t /= len;
+                    MTransPoint(Isect[i].Point, Isect[i].Point, Trans);
+                    MTransNormal(Isect[i].Normal, Isect[i].Normal, Trans);
+                    Isect[i].Normal.normalize();
+                }
 
-            // Check for positive values of t (it's a ray after all...)
-            if(Isect[i].t > Depth_Tolerance)
-            {
                 // Test for clipping volume
                 if (Clip.empty() || Point_In_Clip(Isect[i].Point, Clip, Thread))
                 {
@@ -318,16 +317,18 @@ bool SphereSweep::Intersect_Sphere(const BasicRay &ray, const SPHSWEEP_SPH *Sphe
 
     t_Closest_Approach = dot(Origin_To_Center, ray.Direction);
 
-    if((OCSquared >= Radius2) && (t_Closest_Approach < EPSILON))
+    if((OCSquared >= Radius2) && (t_Closest_Approach < gkDBL_epsilon))
         return false;
 
     t_Half_Chord_Squared = Radius2 - OCSquared + Sqr(t_Closest_Approach);
 
-    if(t_Half_Chord_Squared > EPSILON)
+    // @todo Get clipping if parse time scale values for sweep small. Use gkDBL_epsilon instead?
+    if(t_Half_Chord_Squared > gkMinIsectDepthReturned)
     {
         Half_Chord = sqrt(t_Half_Chord_Squared);
 
         // Calculate smaller depth
+
         Inter[0].t = t_Closest_Approach - Half_Chord;
 
         // Calculate point
@@ -485,6 +486,35 @@ int SphereSweep::Intersect_Segment(const BasicRay &ray, const SPHSWEEP_SEG *Segm
         }
     }
 
+    auto lambdaQuadraticPolyVal = [](const DBL t, const DBL *x) -> DBL
+    {
+         DBL pv = x[0];
+         for (int k=1; k<=2; k++)
+         {
+             pv = pv * t + x[k];
+         }
+         return(pv);
+    };
+
+    auto lambdaTenthOrderPolyVal = [](const DBL t, const DBL *x) -> DBL
+    {
+         DBL pv = x[0];
+         for (int k=1; k<=10; k++)
+         {
+             pv = pv * t + x[k];
+         }
+         return(pv);
+    };
+
+    auto lambdaPolynomialFwdDeflation = [](const int order, const DBL t, const DBL *x, DBL *y) -> void
+    {
+         y[0] = x[0];
+         for (int k=0; k<order; k++)
+         {
+             y[k+1] = t * y[k] + x[k+1];
+         }
+    };
+
     // Calculate intersections with sides of the segment
 
     switch (Segment->Num_Coefs)
@@ -515,7 +545,51 @@ int SphereSweep::Intersect_Segment(const BasicRay &ray, const SPHSWEEP_SEG *Segm
             Coef[1] = 4.0 * d * e - 2.0 * b * c * d;
             Coef[2] = Sqr(e) - b * c * e + Sqr(b) * f;
 
-            Num_Poly_Roots = Solve_Polynomial(2, Coef, Root, true, 1e-10, Thread->Stats());
+            if (Test_Flag(this, STURM_FLAG))
+            {
+                Num_Poly_Roots = polysolve(2, Coef, Root, 0.0, 1.0);
+
+                // First normalize coefficients relative to their range. Differences
+                // in scene set up and scale create differences in evaluated values
+                // as the solvers run. Normalizing to range for better solver accuracy
+                // where determinations based on polynomial value at given t and not
+                // distance along ray / change in t.
+
+                DBL coefMax   = max(max(Coef[0],Coef[1]),Coef[2]);
+                DBL coefMin   = min(min(Coef[0],Coef[1]),Coef[2]);
+                DBL coefRange = (coefMax - coefMin) / 2.0;
+                Coef[0] /= coefRange;
+                Coef[1] /= coefRange;
+                Coef[2] /= coefRange;
+
+                // Use 1st derivative of the polynomial to look for double roots collapsed
+                // to mutiplicity of two. In other words where the polynomial parabola
+                // just touches, but does not cross so as to create both +- values. This degeneracy
+                // happens given certain spacial and ray alignments with respect to the spline.
+
+                DBL CoefD[2];
+                DBL tD;
+                CoefD[0] = 2.0 * Coef[0];
+                CoefD[1] = Coef[1];
+
+                if (CoefD[0] != 0.0)
+                {
+                    tD = -CoefD[1] / CoefD[0];
+                    if ((tD >= 0.0) && (tD <= 1.0))
+                    {
+                        temp = lambdaQuadraticPolyVal(tD,Coef);
+                        if (fabs(temp) < gkDBL_epsilon*10.0)
+                        {
+                            Root[0] = tD;
+                            Num_Poly_Roots = 1;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Num_Poly_Roots = solve_quadratic(Coef, Root);
+            }
             break;
 
         case 4:   // Third order polynomial
@@ -591,7 +665,103 @@ int SphereSweep::Intersect_Segment(const BasicRay &ray, const SPHSWEEP_SEG *Segm
             Coef[9] = 4.0 * j * k - 2.0 * c * k * e - 2.0 * d * j * e + 4.0 * c * d * l;
             Coef[10] = Sqr(k) - d * k * e + l * Sqr(d);
 
-            Num_Poly_Roots = bezier_01(10, Coef, Root, true, 1e-10, Thread);
+            if (Test_Flag(this, STURM_FLAG))
+            {
+                // See case2 comments above for following range normalization reasons.
+                DBL coefMax, coefMin, coefRange, CoefN[11];
+                coefMin = coefMax = Coef[0];
+                for(int z = 1; z <= 10; z++)
+                {
+                    coefMax = max(coefMax,Coef[z]);
+                    coefMin = min(coefMin,Coef[z]);
+                }
+                coefRange = (coefMax - coefMin) / 2.0;
+                for(int z = 0; z <= 10; z++)
+                {
+                    CoefN[z] = Coef[z] / coefRange;
+                }
+
+                int Num_Poly_RootsD = 0;
+                DBL CoefD[10], RootD[9];
+                DBL vala, valb;
+
+                // Look for collapsed roots using polynomial's derivative...
+                CoefD[9] = CoefN[9];
+                for(int z = 0; z < 9; z++)
+                {
+                    CoefD[z] = (DBL)(10 - z) * CoefN[z];
+                }
+
+                Num_Poly_Roots = 0;
+                Num_Poly_RootsD = polysolve(9, CoefD, RootD, 0.0, 1.0);
+                DBL lastRootDPolyVal = 0.0;
+                bool sawDerivativeRootValSignChange = false;
+                for (int rn = 0; rn < Num_Poly_RootsD; rn++)
+                {
+                    temp = lambdaTenthOrderPolyVal(RootD[rn],CoefN);
+
+                    if ((lastRootDPolyVal * temp) < 0.0)
+                    {
+                        sawDerivativeRootValSignChange = true;
+                    }
+                    lastRootDPolyVal = temp;
+
+                    if (fabs(temp) < gkDBL_epsilon*10.0)
+                    {
+                     // vala = lambdaTenthOrderPolyVal(RootD[rn]-gkDBL_epsilon,CoefN);
+                     // valb = lambdaTenthOrderPolyVal(RootD[rn]+gkDBL_epsilon,CoefN);
+
+                     // if ((fabs(val) > fabs(temp)) && ((val * temp) >= 0.0))
+                     // {
+                     //     val = lambdaTenthOrderPolyVal(RootD[rn]+gkDBL_epsilon,CoefN);
+                     //     if ((fabs(val) > fabs(temp)) && ((val * temp) >= 0.0))
+                     //     {
+                                Root[Num_Poly_Roots] = RootD[rn];
+                                Num_Poly_Roots++;
+                     //     }
+                     // }
+                    }
+                }
+
+                // Look to deflate polynomial where roots found by derivative roots.
+                int order = 10;
+                for (int rn = 0; rn < Num_Poly_Roots; rn++)
+                {
+                   lambdaPolynomialFwdDeflation(order,Root[rn],Coef,CoefN);
+                   order--;
+                   for (int ii = 0; ii <= order; ii++)
+                   {
+                       Coef[ii] = CoefN[ii];
+                   }
+                }
+
+                // @todo look to restore bezier_01 like optimization for arbitrary orders.
+                //
+                Num_Poly_Roots = polysolve(order, Coef, Root, 0.0, 1.0);
+
+                // @todo Derivative roots sign change seen not handled... Do something smarter.
+                //
+             // if ((Num_Poly_Roots == 0) && (sawDerivativeRootValSignChange))
+             // {
+             //     lastRootDPolyVal = lambdaTenthOrderPolyVal(RootD[0],CoefN);
+             //     for (int rn = 1; rn < Num_Poly_RootsD; rn++)
+             //     {
+             //         temp = lambdaTenthOrderPolyVal(RootD[rn],CoefN);
+             //
+             //         if ((lastRootDPolyVal * temp) < 0.0)
+             //         {
+             //             // What might that smarter thing be... regula falsi or...
+             //         }
+             //         lastRootDPolyVal = temp;
+             //     }
+             // }
+            }
+            else
+            {
+                Num_Poly_Roots = bezier_01(10, Coef, Root, true, 1e-10, Thread);
+              //Num_Poly_Roots = polysolve(10, Coef, Root, 0.0, 1.0);  // Use to bypass bezier_01
+            }
+
             break;
 
         default:
@@ -679,6 +849,7 @@ int SphereSweep::Intersect_Segment(const BasicRay &ray, const SPHSWEEP_SEG *Segm
 
                 // Check for numeric instability; this may (only?) happen if the root corresponds to two intersections
                 doubleIsect = fabs(rIsect - rRoot) > RADIUS_TOLERANCE;
+
                 if (!doubleIsect)
                 {
                     // Add intersection
@@ -775,16 +946,20 @@ bool SphereSweep::Inside(const Vector3d& IPoint, TraceThreadData *Thread) const
                 Coef[2] -= Sqr(Segment[i].Radius_Coef[0]);
 
                 // Find roots
-                Num_Poly_Roots = Solve_Polynomial(2, Coef, Root, true, 1e-10, Thread->Stats());
+                Num_Poly_Roots = solve_quadratic(Coef, Root);
 
                 // Test for interval [0, 1]
                 for(j = 0; j < Num_Poly_Roots; j++)
                 {
                     if(Root[j] >= 0.0 && Root[j] <= 1.0)
                     {
-                        // At least one root inside interval,
-                        // so we are inside sphere sweep
+                        // At least one root inside interval, so we are inside sphere sweep
                         inside = true;
+                        break;
+                    }
+
+                    if (inside)
+                    {
                         break;
                     }
                 }
@@ -851,17 +1026,22 @@ bool SphereSweep::Inside(const Vector3d& IPoint, TraceThreadData *Thread) const
 
                 // Find roots
                 Num_Poly_Roots = bezier_01(6, Coef, Root, true, 1e-10, Thread);
+              //Num_Poly_Roots = polysolve(6, Coef, Root, 0.0, 1.0); // Use to bypass bezier_01
 
                 // Test for interval [0, 1]
                 for(j = 0; j < Num_Poly_Roots; j++)
                 {
                     if(Root[j] >= 0.0 && Root[j] <= 1.0)
                     {
-                        // At least one root inside interval,
-                        // so we are inside the sphere sweep
+                        // At least one root inside interval, so we are inside the sphere sweep
                         inside = true;
                         break;
                     }
+                }
+
+                if (inside)
+                {
+                    break;
                 }
             }
             break;
@@ -963,7 +1143,8 @@ ObjectPtr SphereSweep::Copy()
     for(i = 0; i < New->Num_Modeling_Spheres; i++)
         New->Modeling_Sphere[i] = Modeling_Sphere[i];
 
-    New->Depth_Tolerance = Depth_Tolerance;
+    // @note  Look to remove this control. It should be constant for numerical accuracy.
+    New->Depth_Tolerance = gkMinIsectDepthReturned;
 
     New->Compute();
 
@@ -1016,7 +1197,9 @@ void SphereSweep::Translate(const Vector3d& Vector, const TRANSFORM *tr)
         Compute_BBox();
     }
     else
+    {
         Transform(tr);
+    }
 }
 
 
@@ -1063,7 +1246,9 @@ void SphereSweep::Rotate(const Vector3d&, const TRANSFORM *tr)
         Compute_BBox();
     }
     else
+    {
         Transform(tr);
+    }
 }
 
 
@@ -1119,7 +1304,9 @@ void SphereSweep::Scale(const Vector3d& Vector, const TRANSFORM *tr)
         Compute_BBox();
     }
     else
+    {
         Transform(tr);
+    }
 }
 
 
@@ -1169,7 +1356,8 @@ SphereSweep::SphereSweep() : ObjectBase(SPHERE_SWEEP_OBJECT)
     Num_Segments = 0;
     Segment = nullptr;
 
-    Depth_Tolerance = DEPTH_TOLERANCE;
+    //@todo  Should hard code and remove this variable for numerical accuracy.
+    Depth_Tolerance = gkMinIsectDepthReturned;
 
     Trans = nullptr;
 }
@@ -1807,7 +1995,9 @@ int SphereSweep::bezier_01(int degree, const DBL* Coef, DBL* Roots, bool sturm, 
         non_positive = (non_positive && (d[degree - i] <= 0));
 
         if(!(non_negative || non_positive))
-            return Solve_Polynomial(degree, Coef, Roots, sturm, tolerance, Thread->Stats());
+        {
+            return polysolve(degree, Coef, Roots, 0.0, 1.0);
+        }
 
         for(j = 0; j < degree - i; ++j)
             d[j] += d[j+1];

@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -61,18 +61,6 @@
 
 namespace pov
 {
-
-/*****************************************************************************
-* Local preprocessor defines
-******************************************************************************/
-
-const DBL DEPTH_TOLERANCE = 1.0e-4;
-const DBL INSIDE_TOLERANCE = 1.0e-4;
-const DBL ROOT_TOLERANCE = 1.0e-4;
-const DBL COEFF_LIMIT = 1.0e-20;
-// const int BINOMSIZE = 40;
-
-
 
 /*****************************************************************************
 * Local variables
@@ -160,7 +148,7 @@ bool Poly::Set_Coeff(const unsigned int x, const unsigned int y, const unsigned 
      * Nah... a is the tetrahedral sum to jump to get to the power of x index (first entry)
      * b is then the triangular sum to add to get to the power of y index (also first entry)
      * and c is the linear sum to add to get to the power of z index (that the one we want)
-     *
+   *
      * Notice that binomials[c][1] == c, but the formula would loose its magic use of
      * pascal triangle everywhere.
      * triangular sums are in the third ([2] column)
@@ -222,6 +210,8 @@ bool Poly::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
     {
         case 1:
 
+            //TODO CLARIFY - Order 2 is minimum allow by parser. Believe this linear case bogus.
+
             cnt = intersect_linear(New_Ray, Coeffs, Depths);
 
             break;
@@ -244,7 +234,7 @@ bool Poly::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 
     for (i = 0; i < cnt; i++)
     {
-        if (Depths[i] > DEPTH_TOLERANCE)
+        if (Depths[i] > gkMinIsectDepthReturned)
         {
             same_root = false;
 
@@ -756,7 +746,32 @@ int Poly::intersect(const BasicRay &ray, int Order, const DBL *Coeffs, int Sturm
 
     if (j > 1)
     {
-        return(Solve_Polynomial(j, &eqn[i], Depths, Sturm_Flag, ROOT_TOLERANCE, Thread->Stats()));
+        // NOTE. Internal intersect_linear and intersect_quadratic functions internal to
+        // this file are used at present over solvers below. Look to move to polysolve
+        // and solve_quadratic in future.
+
+        if (Sturm_Flag)
+        {
+            return(polysolve(j, &eqn[i], Depths, 0.0, 0.0));
+        }
+        else
+        {
+            switch (j)
+            {
+                case 2:
+                    return(solve_quadratic(&eqn[i], Depths));
+                    break;
+                case 3:
+                    return(solve_cubic(&eqn[i], Depths));
+                    break;
+                case 4:
+                    return(solve_quartic(&eqn[i], Depths));
+                    break;
+                default:
+                    return(polysolve(j, &eqn[i], Depths, 0.0, 0.0));
+                    break;
+            }
+        }
     }
     else
     {
@@ -798,11 +813,9 @@ int Poly::intersect_linear(const BasicRay &ray, const DBL *Coeffs, DBL *Depths)
     const DBL *a = Coeffs;
 
     t0 = a[0] * ray.Origin[X] + a[1] * ray.Origin[Y] + a[2] * ray.Origin[Z];
-    t1 = a[0] * ray.Direction[X] + a[1] * ray.Direction[Y] +
+    t1 = a[0] * ray.Direction[X] + a[1] * ray.Direction[Y] + a[2] * ray.Direction[Z];
 
-    a[2] * ray.Direction[Z];
-
-    if (fabs(t1) < EPSILON)
+    if (fabs(t1) < gkDBL_epsilon)
     {
         return(0);
     }
@@ -873,9 +886,9 @@ int Poly::intersect_quadratic(const BasicRay &ray, const DBL *Coeffs, DBL *Depth
     cc = a[0]*x2 + a[1]*x*y + a[2]*x*z + a[3]*x + a[4]*y2 +
          a[5]*y*z + a[6]*y + a[7]*z2 + a[8]*z + a[9];
 
-    if (fabs(ac) < COEFF_LIMIT)
+    if (fabs(ac) < gkDBL_epsilon)
     {
-        if (fabs(bc) < COEFF_LIMIT)
+        if (fabs(bc) < gkDBL_epsilon)
         {
             return(0);
         }
@@ -905,6 +918,7 @@ int Poly::intersect_quadratic(const BasicRay &ray, const DBL *Coeffs, DBL *Depth
 
     Depths[0] = (bc + d) / t;
     Depths[1] = (bc - d) / t;
+
 
     return(2);
 }
@@ -1130,7 +1144,7 @@ bool Poly::Inside(const Vector3d& IPoint, TraceThreadData *Thread) const
 
     Result = inside(New_Point, Order, Coeffs);
 
-    if (Result < INSIDE_TOLERANCE)
+    if (Result < gkDBL_epsilon)
     {
         return ((int)(!Test_Flag(this, INVERTED_FLAG)));
     }

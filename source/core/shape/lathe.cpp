@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -145,7 +145,7 @@ namespace pov
 
 /* Minimal intersection depth for a valid intersection. */
 
-const DBL DEPTH_TOLERANCE = 1.0e-4;
+const DBL DEPTH_TOLERANCE = gkMinIsectDepthReturned;
 
 /*****************************************************************************
 *
@@ -237,6 +237,7 @@ bool Lathe::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
 bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData *Thread)
 {
+    bool badPolynomialDueZeroDY;
     int cnt;
     int found, j, n1, n2;
     DBL k, len, r, m, w, Dy2, r0, Dylen;
@@ -253,10 +254,9 @@ bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData 
     MInvTransPoint(P, ray.Origin, Trans);
     MInvTransDirection(D, ray.Direction, Trans);
 
+    Dylen = D[Y];      // Save for later calculation of ray length from solver result.
     len = D.length();
     D /= len;
-
-    Dylen = D[Y] * len; // TODO FIXME - why don't we do this *before* normalizing, saving us the multiplication by len?
 
     #ifdef LATHE_EXTRA_STATS
         Thread->Stats()[Lathe_Bound_Tests]++;
@@ -311,6 +311,8 @@ bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData 
         // Init number of roots found.
         n1 = 0;
 
+        badPolynomialDueZeroDY = false;
+
         // Intersect segment.
         switch(Spline_Type)
         {
@@ -320,8 +322,26 @@ bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData 
                 x1[0] = Entry->C[Y] * Entry->C[Y] * r - Entry->C[X] * Entry->C[X] * Dy2;
                 x1[1] = 2.0 * (Entry->C[Y] * ((Entry->D[Y] - P[Y]) * r + D[Y] * m) - Entry->C[X] * Entry->D[X] * Dy2);
                 x1[2] = (Entry->D[Y] - P[Y]) * ((Entry->D[Y] - P[Y]) * r + 2.0 * D[Y] * m) + Dy2 * (P[X] * P[X] + P[Z] * P[Z] - Entry->D[X] * Entry->D[X]);
-                n1 = Solve_Polynomial(2, x1, y1, false, 0.0, Thread->Stats());
+
+                if (x1[0] != 0.0)
+                {
+                    k = -x1[1] / (2.0 * x1[0]);
+                }
+                else
+                {
+                    k = 0.5;
+                }
+
+                if (Test_Flag(this, STURM_FLAG))
+                {
+                    n1 = polysolve(2, x1, y1, (fabs(D[Y]) < gkDBL_epsilon) ? 1e-10 : 0.0, 1.0);
+                }
+                else
+                {
+                    n1 = solve_quadratic(x1, y1);
+                }
                 break;
+
             // Quadratic spline
             case QUADRATIC_SPLINE:
                 // Solve 4th order polynomial.
@@ -330,7 +350,15 @@ bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData 
                 x1[2] = r * (2.0 * Entry->B[Y] * (Entry->D[Y] - P[Y]) + Entry->C[Y] * Entry->C[Y]) + 2.0 * Entry->B[Y] * D[Y] * m - (2.0 * Entry->B[X] * Entry->D[X] + Entry->C[X] * Entry->C[X]) * Dy2;
                 x1[3] = 2.0 * (Entry->C[Y] * ((Entry->D[Y] - P[Y]) * r + D[Y] * m) - Entry->C[X] * Entry->D[X] * Dy2);
                 x1[4] = (Entry->D[Y] - P[Y]) * ((Entry->D[Y] - P[Y]) * r + 2.0 * D[Y] * m) + Dy2 * (P[X] * P[X] + P[Z] * P[Z] - Entry->D[X] * Entry->D[X]);
-                n1 = Solve_Polynomial(4, x1, y1, Test_Flag(this, STURM_FLAG), 0.0, Thread->Stats());
+
+                if (Test_Flag(this, STURM_FLAG))
+                {
+                    n1 = polysolve(4, x1, y1, (fabs(D[Y]) < gkDBL_epsilon) ? 1e-10 : 0.0, 1.0);
+                }
+                else
+                {
+                    n1 = solve_quartic(x1, y1);
+                }
                 break;
             // Cubic spline
             case BEZIER_SPLINE:
@@ -343,7 +371,8 @@ bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData 
                 x1[4] = (2.0 * Entry->B[Y] * (Entry->D[Y] - P[Y]) + Entry->C[Y] * Entry->C[Y]) * r + 2.0 * Entry->B[Y] * D[Y] * m - (2.0 * Entry->B[X] * Entry->D[X] + Entry->C[X] * Entry->C[X]) * Dy2;
                 x1[5] = 2.0 * (Entry->C[Y] * ((Entry->D[Y] - P[Y]) * r + D[Y] * m) - Entry->C[X] * Entry->D[X] * Dy2);
                 x1[6] = (Entry->D[Y] - P[Y]) * ((Entry->D[Y] - P[Y]) * r + 2.0 * D[Y] * m) + Dy2 * (P[X] * P[X] + P[Z] * P[Z] - Entry->D[X] * Entry->D[X]);
-                n1 = Solve_Polynomial(6, x1, y1, Test_Flag(this, STURM_FLAG), 0.0, Thread->Stats());
+
+                n1 = polysolve(6, x1, y1, (fabs(D[Y]) < gkDBL_epsilon) ? 1e-10 : 0.0, 1.0);
                 break;
         }
 
@@ -351,13 +380,19 @@ bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData 
         while(n1--)
         {
             w = y1[n1];
+
+            if ((w <= gkMinIsectDepthReturned) || (w >= MAX_DISTANCE))
+            {
+                continue;
+            }
+
             if((w >= 0.0) && (w <= 1.0))
             {
-                if(fabs(D[Y]) > EPSILON)
+                if(fabs(D[Y]) >= gkDBL_epsilon)
                 {
                     k = (w * (w * (w * Entry->A[Y] + Entry->B[Y]) + Entry->C[Y]) + Entry->D[Y] - P[Y]);
 
-                    if (test_hit(ray, Depth_Stack, k / Dylen, w, intervals[j].n, Thread))
+                    if (test_hit(ray, Depth_Stack, len, k / Dylen, w, intervals[j].n, Thread))
                     {
                         found = true;
                         k /= D[Y];
@@ -367,17 +402,41 @@ bool Lathe::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData 
                 }
                 else
                 {
+                    /// @note Using a re-calculation when D[Y] essentialy 0.0 and the normal ray
+                    /// surface equation becomes ill-formed in a way polynomial solvers cannot
+                    /// handle well. OK, except this method depends on de-tuning the sturm chain
+                    /// based polysolve so as to find at least one root 'w' where two roots
+                    /// have collapsed. There is row to row noise in the position of 'w' which
+                    /// causes self shape shadow artifacts.
+                    ///
+                    /// @todo Either better handle self-shape shading elsewhere or look for
+                    /// a better overall approach.
+
                     k = w * (w * (w * Entry->A[X] + Entry->B[X]) + Entry->C[X]) + Entry->D[X];
 
                     x2[0] = r;
                     x2[1] = 2.0 * m;
                     x2[2] = P[X] * P[X] + P[Z] * P[Z] - k * k;
 
-                    n2 = Solve_Polynomial(2, x2, y2, false, 0.0, Thread->Stats());
+                    if (Test_Flag(this, STURM_FLAG))
+                    {
+                        n2 = polysolve(2, x2, y2, 0.0, 0.0);
+                    }
+                    else
+                    {
+                        n2 = solve_quadratic(x2, y2);
+                    }
+
                     while(n2--)
                     {
                         k = y2[n2];
-                        if(test_hit(ray, Depth_Stack, k / len, w, intervals[j].n, Thread))
+
+                        if ((k <= gkMinIsectDepthReturned) || (k >= MAX_DISTANCE))
+                        {
+                            continue;
+                        }
+
+                        if(test_hit(ray, Depth_Stack, len, k / len, w, intervals[j].n, Thread))
                         {
                             found = true;
                             if(k < best)
@@ -460,15 +519,22 @@ bool Lathe::Inside(const Vector3d& IPoint, TraceThreadData *Thread) const
 
                 /* Test if we are inside the segments cylindrical bound. */
 
-                if ((P[Y] >= height[entry[i].h1] - EPSILON) &&
-                    (P[Y] <= height[entry[i].h2] + EPSILON))
+                if ((P[Y] >= height[entry[i].h1] - gkDBL_epsilon) &&
+                    (P[Y] <= height[entry[i].h2] + gkDBL_epsilon))
                 {
                     x[0] = Entry->A[Y];
                     x[1] = Entry->B[Y];
                     x[2] = Entry->C[Y];
                     x[3] = Entry->D[Y] - P[Y];
 
-                    n = Solve_Polynomial(3, x, y, Test_Flag(this, STURM_FLAG), 0.0, Thread->Stats());
+                    if (Test_Flag(this, STURM_FLAG))
+                    {
+                        n = polysolve(3, x, y, 0.0, 0.0);
+                    }
+                    else
+                    {
+                        n = solve_cubic(x, y);
+                    }
 
                     while (n--)
                     {
@@ -549,7 +615,7 @@ void Lathe::Normal(Vector3d& Result, Intersection *Inter, TraceThreadData *Threa
 
     r = P[X] * P[X] + P[Z] * P[Z];
 
-    if (r > EPSILON)
+    if (r > gkDBL_epsilon)
     {
         r = sqrt(r);
 
@@ -1153,7 +1219,7 @@ void Lathe::Compute_Lathe(Vector2d *P, TraceThreadData *Thread)
             c[1] = 2.0 * B[X];
             c[2] = C[X];
 
-            n = Solve_Polynomial(2, c, r, false, 0.0, Thread->Stats());
+            n = solve_quadratic(c, r);
 
             while (n--)
             {
@@ -1167,7 +1233,7 @@ void Lathe::Compute_Lathe(Vector2d *P, TraceThreadData *Thread)
             c[1] = 2.0 * B[Y];
             c[2] = C[Y];
 
-            n = Solve_Polynomial(2, c, r, false, 0.0, Thread->Stats());
+            n = solve_quadratic(c, r);
 
             while (n--)
             {
@@ -1255,7 +1321,7 @@ void Lathe::Compute_Lathe(Vector2d *P, TraceThreadData *Thread)
 *   Lathe       - Pointer to lathe structure
 *   Ray         - Current ray
 *   Depth_Stack - Current depth stack
-*   d, w, n     - Intersection depth, parameter and segment number
+*   l, d, w, n  - Normalization length, Intersection depth, Solver depth and segment number
 *
 * OUTPUT
 *
@@ -1277,11 +1343,12 @@ void Lathe::Compute_Lathe(Vector2d *P, TraceThreadData *Thread)
 *
 ******************************************************************************/
 
-bool Lathe::test_hit(const BasicRay &ray, IStack& Depth_Stack, DBL d, DBL w, int n, TraceThreadData *Thread)
+bool Lathe::test_hit(const BasicRay &ray, IStack& Depth_Stack, DBL len, DBL d, DBL w, int n,
+                     TraceThreadData *Thread)
 {
     Vector3d IPoint;
 
-    if ((d > DEPTH_TOLERANCE) && (d < MAX_DISTANCE))
+    if ((d > gkMinIsectDepthReturned / len) && (d < MAX_DISTANCE))
     {
         IPoint = ray.Evaluate(d);
 

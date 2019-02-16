@@ -11,7 +11,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -119,12 +119,12 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/// @var DEPTH_TOLERANCE
+/// @var kDepthTolerance
 /// const DBL value above which intersections are returned.
 ///
-/// Currently set to @ref MIN_ISECT_DEPTH_RETURNED.
+/// Currently set to @ref gkMinIsectDepthReturned.
 ///
-/// @ref DEPTH_TOLERANCE since v1.0 was 1.0e-2. Further, the value was used for
+/// @ref kDepthTolerance since v1.0 was 1.0e-2. Further, the value was used for
 /// both minimum returned root depth and as the 'mindist' in all of the
 /// determine_influences()'s intersect_<> functions. The latter likely done
 /// to help the initial, and long not used, solve_quartic() function. In any
@@ -133,21 +133,21 @@ namespace pov
 /// In v3.7 the subsurface (SSLT) feature added a special conditional to set
 /// both values to 0.0 which worked without issue. Currently this 0.0 value is
 /// used for all but the returned intersection where @ref
-/// MIN_ISECT_DEPTH_RETURNED now used.
+/// gkMinIsectDepthReturned now used.
 ///
-const DBL DEPTH_TOLERANCE = MIN_ISECT_DEPTH_RETURNED;
+const DBL kDepthTolerance = gkMinIsectDepthReturned;
 
-/// @var INSIDE_TOLERANCE
+/// @var kInsideTolerance
 /// const DBL density tolerance for inside test.
 ///
-/// Currently set to @ref POV_DBL_EPSILON.
+/// Currently set to @ref gkDBL_epsilon.
 ///
-/// @ref INSIDE_TOLERANCE was since v1.0 set to 1.0e-6 which is a good value if
+/// @ref kInsideTolerance was since v1.0 set to 1.0e-6 which is a good value if
 /// running single floats. With double floats much smaller is better as this is
 /// an offset to the outside of the 0.0 density surface after the blob threshold
 /// is subtracted.
 ///
-const DBL INSIDE_TOLERANCE = POV_DBL_EPSILON;
+const DBL kInsideTolerance = gkDBL_epsilon;
 
 /* Ray enters/exits a component. */
 const int ENTERING = 0;
@@ -186,7 +186,7 @@ const int EXITING  = BLOB_ENTER_EXIT_FLAG;
 *
 *   Explanation for spherical components:
 *
-*   After making the substitutions in MakeBlob, there is a formula
+*   After making the substitutions in Make_Blob, there is a formula
 *   for each component that has the form:
 *
 *      c0 * r^4 + c1 * r^2 + c2.
@@ -485,7 +485,7 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
          * then first add/subtract next region before testing. [DB 7/94]
          */
 
-        if ((i + 1 < cnt) && (fabs(intervals[i].bound - intervals[i + 1].bound) < EPSILON))
+        if ((i + 1 < cnt) && (fabs(intervals[i].bound - intervals[i + 1].bound) < gkDBL_epsilon))
         {
             continue;
         }
@@ -531,7 +531,14 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 
         /* Solve polynomial. */
 
-        root_count = Solve_Polynomial(4, coeffs, roots, Test_Flag(this, STURM_FLAG), 1.0e-11, Thread->Stats());
+        if (Test_Flag(this, STURM_FLAG))
+        {
+            root_count = polysolve(4, coeffs, roots, 0.0, max_bound);
+        }
+        else
+        {
+            root_count = solve_quartic(coeffs, roots);
+        }
 
         /* See if any of the roots are valid. */
 
@@ -551,7 +558,7 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 
                 dist = (dist * max_bound + start_dist) / len;
 
-                if ((dist > DEPTH_TOLERANCE) && (dist < MAX_DISTANCE))
+                if ((dist > kDepthTolerance/len) && (dist < MAX_DISTANCE))
                 {
                     IPoint = ray.Evaluate(dist);
 
@@ -741,14 +748,14 @@ int Blob::intersect_cylinder(const Blob_Element *Element, const Vector3d& P,
 
     a = DD[X] * DD[X] + DD[Y] * DD[Y];
 
-    if (a > EPSILON)
+    if (a > gkDBL_epsilon)
     {
         b = PP[X] * DD[X] + PP[Y] * DD[Y];
         c = PP[X] * PP[X] + PP[Y] * PP[Y] - Element->rad2;
 
         d = b * b - a * c;
 
-        if (d > EPSILON)
+        if (d > gkDBL_epsilon)
         {
             d = sqrt(d);
 
@@ -776,7 +783,7 @@ int Blob::intersect_cylinder(const Blob_Element *Element, const Vector3d& P,
 
     /* Intersect base/cap plane. */
 
-    if (fabs(DD[Z]) > EPSILON)
+    if (fabs(DD[Z]) > gkDBL_epsilon)
     {
         /* Intersect base plane. */
 
@@ -872,7 +879,7 @@ int Blob::intersect_ellipsoid(const Blob_Element *Element, const Vector3d& P,
 
     d = b * b - t + Element->rad2;
 
-    if (d < EPSILON)
+    if (d < gkDBL_epsilon)
     {
         return (false);
     }
@@ -951,7 +958,7 @@ int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P,
 
         d = b * b - t + Element->rad2;
 
-        if (d < EPSILON)
+        if (d < gkDBL_epsilon)
         {
             return (false);
         }
@@ -1019,7 +1026,7 @@ int Blob::intersect_hemisphere(const Blob_Element *Element, const Vector3d& P,
 
         d = b * b - t + Element->rad2;
 
-        if (d < EPSILON)
+        if (d < gkDBL_epsilon)
         {
             return (false);
         }
@@ -1125,7 +1132,7 @@ int Blob::intersect_sphere(const Blob_Element *Element, const Vector3d& P,
 
     d = b * b - t + Element->rad2;
 
-    if (d < EPSILON)
+    if (d < gkDBL_epsilon)
     {
         return (false);
     }
@@ -1619,7 +1626,7 @@ bool Blob::Inside(const Vector3d& Test_Point, TraceThreadData *Thread) const
         New_Point = Test_Point;
     }
 
-    if (calculate_field_value(New_Point, Thread) > Data->Threshold - INSIDE_TOLERANCE)
+    if (calculate_field_value(New_Point, Thread) > Data->Threshold - kInsideTolerance)
     {
         /* We are inside. */
 
@@ -2386,7 +2393,7 @@ void Blob::get_element_bounding_sphere(const Blob_Element *Element, Vector3d& Ce
         r = max(max(fabs(local_BBox.size[X]), fabs(local_BBox.size[Y])),
                    fabs(local_BBox.size[Z]));
 
-        r2 = Sqr(r) + EPSILON;
+        r2 = Sqr(r) + gkDBL_epsilon;
     }
 
     Center = C;
@@ -2557,7 +2564,7 @@ int Blob::Make_Blob(DBL threshold, Blob_List_Struct *BlobList, int npoints, Trac
         POV_SHAPE_ASSERT(it != Data->Entry.end()) ;
         Blob_Element* Entry = &*it++ ;
 
-        if ((fabs(temp->elem.c[2]) < EPSILON) || (temp->elem.rad2 < EPSILON))
+        if ((fabs(temp->elem.c[2]) < gkMinIsectDepthReturned) || (temp->elem.rad2 < gkMinIsectDepthReturned))
         {
 ;// TODO MESSAGE            Warning("Degenerate Blob element");
         }
@@ -2631,36 +2638,6 @@ int Blob::Make_Blob(DBL threshold, Blob_List_Struct *BlobList, int npoints, Trac
     return (count) ;
 }
 
-/*****************************************************************************
-*
-* FUNCTION
-*
-*   Test_Blob_Opacity
-*
-* INPUT
-*
-*   Blob - Pointer to blob structure
-*
-* OUTPUT
-*
-*   Blob
-*
-* RETURNS
-*
-* AUTHOR
-*
-*   Dieter Bayer
-*
-* DESCRIPTION
-*
-*   Set the opacity flag of the blob according to the opacity
-*   of the blob's texture(s).
-*
-* CHANGES
-*
-*   Apr 1996 : Creation.
-*
-******************************************************************************/
 
 bool Blob::IsOpaque() const
 {
@@ -2680,7 +2657,6 @@ bool Blob::IsOpaque() const
     // What we probably really want here is `return ObjectBase::IsOpaque()`.
     return (Texture == nullptr) || Test_Opacity(Texture);
 }
-
 
 
 /*****************************************************************************
@@ -2884,10 +2860,10 @@ void Blob::Determine_Textures(Intersection *isect, bool hitinside, WeightedTextu
 
 void Blob::determine_element_texture(const Blob_Element *Element, TEXTURE *ElementTex, const Vector3d& P, WeightedTextureVector& textures)
 {
-    DBL density = fabs(calculate_element_field(Element, P));
+        DBL density = fabs(calculate_element_field(Element, P));
 
-    if(density > 0.0)
-        textures.push_back(WeightedTexture(density, ElementTex != nullptr ? ElementTex : Texture));
+        if(density > 0.0)
+                textures.push_back(WeightedTexture(density, ElementTex != nullptr ? ElementTex : Texture));
 }
 
 

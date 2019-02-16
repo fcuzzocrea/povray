@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -135,10 +135,6 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/* Minimal intersection depth for a valid intersection. */
-
-const DBL DEPTH_TOLERANCE = 1.0e-4;
-
 /* Part of the prism hit. */
 
 const int BASE_HIT   = 1;
@@ -232,7 +228,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
     {
         case LINEAR_SWEEP :
 
-            if (fabs(D[Y]) < EPSILON)
+            if (fabs(D[Y]) < gkDBL_epsilon)
             {
                 if ((P[Y] < Height1) || (P[Y] > Height2))
                     return(false);
@@ -245,7 +241,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
                     k = (Height2 - P[Y]) / D[Y];
 
-                    if ((k > DEPTH_TOLERANCE) && (k < MAX_DISTANCE))
+                    if ((k > gkMinIsectDepthReturned) && (k < MAX_DISTANCE))
                     {
                         u = P[X] + k * D[X];
                         v = P[Z] + k * D[Z];
@@ -253,7 +249,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                         if (in_curve(u, v, Thread))
                         {
                             distance = k / len;
-                            if ((distance > DEPTH_TOLERANCE) && (distance < MAX_DISTANCE))
+                            if ((distance > gkMinIsectDepthReturned / len) && (distance < MAX_DISTANCE))
                             {
                                 IPoint = ray.Evaluate(distance);
                                 if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
@@ -269,7 +265,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
                     k = (Height1 - P[Y]) / D[Y];
 
-                    if ((k > DEPTH_TOLERANCE) && (k < MAX_DISTANCE))
+                    if ((k > gkMinIsectDepthReturned) && (k < MAX_DISTANCE))
                     {
                         u = P[X] + k * D[X];
                         v = P[Z] + k * D[Z];
@@ -277,7 +273,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                         if (in_curve(u, v, Thread))
                         {
                             distance = k / len;
-                            if ((distance > DEPTH_TOLERANCE) && (distance < MAX_DISTANCE))
+                            if ((distance > gkMinIsectDepthReturned / len) && (distance < MAX_DISTANCE))
                             {
                                 IPoint = ray.Evaluate(distance);
                                 if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
@@ -297,7 +293,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
             // While the test is quite simple, it may not kick in frequently enough to warrant the
             // effort, except in a rather special use case involving an orthographic camera.
 
-            if ((fabs(D[X]) > EPSILON) || (fabs(D[Z]) > EPSILON)) // Quick bailout if ray is parallel to all sides
+            if ((fabs(D[X]) > gkDBL_epsilon) || (fabs(D[Z]) > gkDBL_epsilon)) // Quick bailout if ray is parallel to all sides
             {
                 Entry = Spline->Entry;
                 for (j = 0; j < Number; j++, Entry++)
@@ -327,8 +323,11 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
                             x[0] = Entry->C[X] * D[Z] - Entry->C[Y] * D[X];
                             x[1] = D[Z] * (Entry->D[X] - P[X]) - D[X] * (Entry->D[Y] - P[Z]);
-                            if (fabs(x[0]) > EPSILON)
+
+                            if (fabs(x[0]) > gkDBL_epsilon)
+                            {
                                 y[n++] = -x[1] / x[0];
+                            }
                             break;
 
                         case QUADRATIC_SPLINE :
@@ -343,7 +342,14 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                             x[1] = Entry->C[X] * D[Z] - Entry->C[Y] * D[X];
                             x[2] = D[Z] * (Entry->D[X] - P[X]) - D[X] * (Entry->D[Y] - P[Z]);
 
-                            n = Solve_Polynomial(2, x, y, false, 0.0, Thread->Stats());
+                            if (Test_Flag(this, STURM_FLAG))
+                            {
+                                n = polysolve(2, x, y, 0.0, 1.0);
+                            }
+                            else
+                            {
+                                n = solve_quadratic(x, y);
+                            }
                             break;
 
                         case CUBIC_SPLINE :
@@ -359,7 +365,15 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                                 x[1] = Entry->B[X] * D[Z] - Entry->B[Y] * D[X];
                                 x[2] = Entry->C[X] * D[Z] - Entry->C[Y] * D[X];
                                 x[3] = D[Z] * (Entry->D[X] - P[X]) - D[X] * (Entry->D[Y] - P[Z]);
-                                n = Solve_Polynomial(3, x, y, Test_Flag(this, STURM_FLAG), 0.0, Thread->Stats());
+
+                                if (Test_Flag(this, STURM_FLAG))
+                                {
+                                    n = polysolve(3, x, y, 0.0, 1.0);
+                                }
+                                else
+                                {
+                                    n = solve_cubic(x, y);
+                                }
                             }
                             break;
                     }
@@ -369,9 +383,16 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                     {
                         w = y[n];
 
+                        // In scaled solver numerical space filter to numerical accuracy
+
+                        if ((y[n] <= gkMinIsectDepthReturned) || (y[n] >= MAX_DISTANCE))
+                        {
+                            continue;
+                        }
+
                         if ((w >= 0.0) && (w <= 1.0))
                         {
-                            if (fabs(D[X]) > EPSILON)
+                            if (fabs(D[X]) > gkDBL_epsilon)
                             {
                                 k = (w * (w * (w * Entry->A[X] + Entry->B[X]) + Entry->C[X]) + Entry->D[X] - P[X]) / D[X];
                             }
@@ -385,7 +406,10 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                             if ((h >= Height1) && (h <= Height2))
                             {
                                 distance = k / len;
-                                if ((distance > DEPTH_TOLERANCE) && (distance < MAX_DISTANCE))
+
+                                // Filter again in root scale restored, numerically representable, space.
+
+                                if ((distance > gkMinIsectDepthReturned / len) && (distance < MAX_DISTANCE))
                                 {
                                     IPoint = ray.Evaluate(distance);
                                     if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
@@ -408,7 +432,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
         case CONIC_SWEEP :
 
-            if (fabs(D[Y]) < EPSILON)
+            if (fabs(D[Y]) < gkDBL_epsilon)
             {
                 if ((P[Y] < Height1) || (P[Y] > Height2))
                     return(false);
@@ -418,11 +442,12 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                 if (Test_Flag(this, CLOSED_FLAG))
                 {
                     /* Intersect ray with the cap-plane. */
-                    if (fabs(Height2) > EPSILON)
+
+                    if (fabs(Height2) > gkDBL_epsilon)
                     {
                         k = (Height2 - P[Y]) / D[Y];
 
-                        if ((k > DEPTH_TOLERANCE) && (k < MAX_DISTANCE))
+                        if ((k > gkMinIsectDepthReturned) && (k < MAX_DISTANCE))
                         {
                             u = (P[X] + k * D[X]) / Height2;
                             v = (P[Z] + k * D[Z]) / Height2;
@@ -430,7 +455,8 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                             if (in_curve(u, v, Thread))
                             {
                                 distance = k / len;
-                                if ((distance > DEPTH_TOLERANCE) && (distance < MAX_DISTANCE))
+
+                                if ((distance > gkMinIsectDepthReturned / len) && (distance < MAX_DISTANCE))
                                 {
                                     IPoint = ray.Evaluate(distance);
                                     if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
@@ -445,11 +471,11 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
                     /* Intersect ray with the base-plane. */
 
-                    if (fabs(Height1) > EPSILON)
+                    if (fabs(Height1) > gkDBL_epsilon)
                     {
                         k = (Height1 - P[Y]) / D[Y];
 
-                        if ((k > DEPTH_TOLERANCE) && (k < MAX_DISTANCE))
+                        if ((k > gkMinIsectDepthReturned) && (k < MAX_DISTANCE))
                         {
                             u = (P[X] + k * D[X]) / Height1;
                             v = (P[Z] + k * D[Z]) / Height1;
@@ -457,7 +483,8 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                             if (in_curve(u, v, Thread))
                             {
                                 distance = k / len;
-                                if ((distance > DEPTH_TOLERANCE) && (distance < MAX_DISTANCE))
+
+                                if ((distance > gkMinIsectDepthReturned / len) && (distance < MAX_DISTANCE))
                                 {
                                     IPoint = ray.Evaluate(distance);
                                     if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
@@ -508,8 +535,10 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                         x[0] = Entry->C[X] * k1 + Entry->C[Y] * k2;
                         x[1] = Entry->D[X] * k1 + Entry->D[Y] * k2 + k3;
 
-                        if (fabs(x[0]) > EPSILON)
+                        if (fabs(x[0]) > gkDBL_epsilon)
+                        {
                             y[n++] = -x[1] / x[0];
+                        }
                         break;
 
                     case QUADRATIC_SPLINE :
@@ -519,7 +548,14 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                         x[1] = Entry->C[X] * k1 + Entry->C[Y] * k2;
                         x[2] = Entry->D[X] * k1 + Entry->D[Y] * k2 + k3;
 
-                        n = Solve_Polynomial(2, x, y, false, 0.0, Thread->Stats());
+                        if (Test_Flag(this, STURM_FLAG))
+                        {
+                            n = polysolve(2, x, y, 0.0, 1.0);
+                        }
+                        else
+                        {
+                            n = solve_quadratic(x, y);
+                        }
                         break;
 
                     case CUBIC_SPLINE :
@@ -531,7 +567,14 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                         x[2] = Entry->C[X] * k1 + Entry->C[Y] * k2;
                         x[3] = Entry->D[X] * k1 + Entry->D[Y] * k2 + k3;
 
-                        n = Solve_Polynomial(3, x, y, Test_Flag(this, STURM_FLAG), 0.0, Thread->Stats());
+                        if (Test_Flag(this, STURM_FLAG))
+                        {
+                            n = polysolve(3, x, y, 0.0, 1.0);
+                        }
+                        else
+                        {
+                            n = solve_cubic(x, y);
+                        }
                         break;
                 }
 
@@ -541,12 +584,19 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                 {
                     w = y[n];
 
+                    // In scaled solver numerical space filter to numerical accuracy
+
+                    if ((y[n] <= gkMinIsectDepthReturned) || (y[n] >= MAX_DISTANCE))
+                    {
+                        continue;
+                    }
+
                     if ((w >= 0.0) && (w <= 1.0))
                     {
                         k = w * (w * (w * Entry->A[X] + Entry->B[X]) + Entry->C[X]) + Entry->D[X];
                         h = D[X] - k * D[Y];
 
-                        if (fabs(h) > EPSILON)
+                        if (fabs(h) > gkDBL_epsilon)
                         {
                             k = (k * P[Y] - P[X]) / h;
                         }
@@ -556,7 +606,7 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
                             h = D[Z] - k * D[Y];
 
-                            if (fabs(h) > EPSILON)
+                            if (fabs(h) > gkDBL_epsilon)
                             {
                                 k = (k * P[Y] - P[Z]) / h;
                             }
@@ -572,7 +622,10 @@ bool Prism::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
                         if ((h >= Height1) && (h <= Height2))
                         {
                             distance = k / len;
-                            if ((distance > DEPTH_TOLERANCE) && (distance < MAX_DISTANCE))
+
+                            // Filter again in root scale restored, numerically representable, space.
+
+                            if ((distance > gkMinIsectDepthReturned / len) && (distance < MAX_DISTANCE))
                             {
                                 IPoint = ray.Evaluate(distance);
                                 if (Clip.empty() || Point_In_Clip(IPoint, Clip, Thread))
@@ -641,7 +694,7 @@ bool Prism::Inside(const Vector3d& IPoint, TraceThreadData *Thread) const
         {
             /* Scale x and z coordinate. */
 
-            if (fabs(P[Y]) > EPSILON)
+            if (fabs(P[Y]) > gkDBL_epsilon)
             {
                 P[X] /= P[Y];
                 P[Z] /= P[Y];
@@ -737,7 +790,7 @@ void Prism::Normal(Vector3d& Result, Intersection *Inter, TraceThreadData *Threa
 
                     MInvTransPoint(P, Inter->IPoint, Trans);
 
-                    if (fabs(P[Y]) > EPSILON)
+                    if (fabs(P[Y]) > gkDBL_epsilon)
                     {
                         N[X] =   Inter->d1 * (3.0 * Entry.A[Y] * Inter->d1 + 2.0 * Entry.B[Y]) + Entry.C[Y];
                         N[Z] = -(Inter->d1 * (3.0 * Entry.A[X] * Inter->d1 + 2.0 * Entry.B[X]) + Entry.C[X]);
@@ -1169,7 +1222,14 @@ int Prism::in_curve(DBL u, DBL v, TraceThreadData *Thread) const
                 x[2] = Entry.C[Y];
                 x[3] = Entry.D[Y] - v;
 
-                n = Solve_Polynomial(3, x, y, Test_Flag(this, STURM_FLAG), 0.0, Thread->Stats());
+                if (Test_Flag(this, STURM_FLAG))
+                {
+                    n = polysolve(3, x, y, 0.0, 0.0);
+                }
+                else
+                {
+                    n = solve_cubic(x, y);
+                }
 
                 while (n--)
                 {
@@ -1224,14 +1284,14 @@ bool Prism::test_rectangle(const Vector3d& P, const Vector3d& D, DBL x1, DBL z1,
 {
     DBL dmin, dmax, tmin, tmax;
 
-    if (fabs(D[X]) > EPSILON)
+    if (fabs(D[X]) > gkDBL_epsilon)
     {
         if (D[X] > 0.0)
         {
             dmin = (x1 - P[X]) / D[X];
             dmax = (x2 - P[X]) / D[X];
 
-            if (dmax < EPSILON)
+            if (dmax < gkDBL_epsilon)
             {
                 return(false);
             }
@@ -1240,7 +1300,7 @@ bool Prism::test_rectangle(const Vector3d& P, const Vector3d& D, DBL x1, DBL z1,
         {
             dmax = (x1 - P[X]) / D[X];
 
-            if (dmax < EPSILON)
+            if (dmax < gkDBL_epsilon)
             {
                 return(false);
             }
@@ -1266,7 +1326,7 @@ bool Prism::test_rectangle(const Vector3d& P, const Vector3d& D, DBL x1, DBL z1,
         }
     }
 
-    if (fabs(D[Z]) > EPSILON)
+    if (fabs(D[Z]) > gkDBL_epsilon)
     {
         if (D[Z] > 0.0)
         {
@@ -1281,7 +1341,7 @@ bool Prism::test_rectangle(const Vector3d& P, const Vector3d& D, DBL x1, DBL z1,
 
         if (tmax < dmax)
         {
-            if (tmax < EPSILON)
+            if (tmax < gkDBL_epsilon)
             {
                 return(false);
             }
@@ -1389,8 +1449,8 @@ void Prism::Compute_Prism(Vector2d *P, TraceThreadData *Thread)
     }
 
     /***************************************************************************
-  * Calculate segments.
-  ****************************************************************************/
+     * Calculate segments.
+    ****************************************************************************/
 
     /* We want to know the size of the overall bounding rectangle. */
 
@@ -1552,7 +1612,7 @@ void Prism::Compute_Prism(Vector2d *P, TraceThreadData *Thread)
             c[1] = 2.0 * B[X];
             c[2] =       C[X];
 
-            n = Solve_Polynomial(2, c, r, false, 0.0, Thread->Stats());
+            n = solve_quadratic(c, r);
 
             while (n--)
             {
@@ -1566,7 +1626,7 @@ void Prism::Compute_Prism(Vector2d *P, TraceThreadData *Thread)
             c[1] = 2.0 * B[Y];
             c[2] =       C[Y];
 
-            n = Solve_Polynomial(2, c, r, false, 0.0, Thread->Stats());
+            n = solve_quadratic(c, r);
 
             while (n--)
             {
@@ -1606,8 +1666,8 @@ void Prism::Compute_Prism(Vector2d *P, TraceThreadData *Thread)
         {
             case LINEAR_SPLINE:
 
-                if ((fabs(P[i1][X] - First[X]) < EPSILON) &&
-                    (fabs(P[i1][Y] - First[Y]) < EPSILON))
+                if ((fabs(P[i1][X] - First[X]) < gkDBL_epsilon) &&
+                    (fabs(P[i1][Y] - First[Y]) < gkDBL_epsilon))
                 {
                     i++;
 
@@ -1621,8 +1681,8 @@ void Prism::Compute_Prism(Vector2d *P, TraceThreadData *Thread)
 
             case QUADRATIC_SPLINE:
 
-                if ((fabs(P[i2][X] - First[X]) < EPSILON) &&
-                    (fabs(P[i2][Y] - First[Y]) < EPSILON))
+                if ((fabs(P[i2][X] - First[X]) < gkDBL_epsilon) &&
+                    (fabs(P[i2][Y] - First[Y]) < gkDBL_epsilon))
                 {
                     i += 2;
 
@@ -1636,8 +1696,8 @@ void Prism::Compute_Prism(Vector2d *P, TraceThreadData *Thread)
 
             case CUBIC_SPLINE:
 
-                if ((fabs(P[i2][X] - First[X]) < EPSILON) &&
-                    (fabs(P[i2][Y] - First[Y]) < EPSILON))
+                if ((fabs(P[i2][X] - First[X]) < gkDBL_epsilon) &&
+                    (fabs(P[i2][Y] - First[Y]) < gkDBL_epsilon))
                 {
                     i += 3;
 

@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -59,10 +59,8 @@ namespace pov
 // Tolerance used for degenerated torus detection and intersection of flat extremities
 // as it is used only with low power, precision can be high
 const DBL Lemon_Tolerance = 1.0e-10;
-// from spheres.cpp, otherwise noisy sphere, used with square and root, so less precision
-const DBL DEPTH_TOLERANCE = 1.0e-6;
 
-// Tolerance used for order reduction during root finding.
+// Tolerance used while selecting from solver returned roots.
 // TODO FIXME - can we use EPSILON or a similar more generic constant instead?
 const DBL ROOT_TOLERANCE = 1.0e-4;
 
@@ -189,7 +187,15 @@ int Lemon::Intersect(const Vector3d& P, const Vector3d& D, LEMON_INT *Intersecti
 
         c[4] = k1 * k1 + 4.0 * R2 * (Pz2 - r2);
 
-        n = Solve_Polynomial(4, c, r, Test_Flag(this, STURM_FLAG), ROOT_TOLERANCE, Thread->Stats());
+        if (Test_Flag(this, STURM_FLAG))
+        {
+            n = polysolve(4, c, r, 0.0, 0.0);
+        }
+        else
+        {
+            n = solve_quartic(c, r);
+        }
+
         while (n--)
         {
             // here we only keep the 'lemon' inside the torus
@@ -198,6 +204,11 @@ int Lemon::Intersect(const Vector3d& P, const Vector3d& D, LEMON_INT *Intersecti
             //   (x + r)^2 + z^2 = R^2 around z (so replacing x by sqrt(x^2+y^2))
             // with something which is faster than a 4th degree polynome,
             // please feel welcome to update and share...
+
+            if ((r[n] <= gkMinIsectDepthReturned) || (r[n] >= MAX_DISTANCE))
+            {
+                continue;
+            }
 
             Ipoint = P + r[n] * D;
             vertical = Ipoint[Z];
@@ -243,7 +254,7 @@ int Lemon::Intersect(const Vector3d& P, const Vector3d& D, LEMON_INT *Intersecti
                 Half_Chord = sqrt(t_Half_Chord_Squared);
                 // first intersection
                 Depth = t_Closest_Approach - Half_Chord;
-                if((Depth > DEPTH_TOLERANCE) && (Depth < MAX_DISTANCE))
+                if((Depth > gkMinIsectDepthReturned) && (Depth < MAX_DISTANCE))
                 {
 
                     Ipoint = P + Depth * D;
@@ -260,7 +271,7 @@ int Lemon::Intersect(const Vector3d& P, const Vector3d& D, LEMON_INT *Intersecti
                 }
                 // second intersection
                 Depth = t_Closest_Approach + Half_Chord;
-                if((Depth > DEPTH_TOLERANCE) && (Depth < MAX_DISTANCE))
+                if((Depth > gkMinIsectDepthReturned) && (Depth < MAX_DISTANCE))
                 {
                     Ipoint = P + Depth * D;
                     vertical = Ipoint[Z];
@@ -501,7 +512,7 @@ void Lemon::Scale(const Vector3d&, const TRANSFORM *tr)
 
 void Lemon::Transform(const TRANSFORM *tr)
 {
-    if(Trans == nullptr)
+    if (Trans == nullptr)
         Trans = Create_Transform();
 
     Compose_Transforms(Trans, tr);

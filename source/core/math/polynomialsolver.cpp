@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -118,12 +118,19 @@ const int kMaxIterations = 65;
 /// interval is returned.
 ///
 /// @note
-///     Rays near tangent to surface create extremely close roots and instability
-///     in sturm chain sign change results from numchanges(). Threshold often
-///     tripped in sphere_sweep polynomials where the roots frequently collapse
-///     inward due equation set up.
+///     Rays near tangent to surface create extremely close roots and instability in
+///     sturm chain sign change results from numchanges(). Threshold often tripped
+///     where the roots collapse inward due external equation set up creating a
+///     multiple root at one t. The lathe and sphere_sweep objects being common
+///     "offenders." Essentially, the polynomial curve is just touching the value=0
+///     in these cases and not crossing through so as to create root 'multiplicity'
+///     no root isolation method handles perfectly and with which solvers struggle.
+///     The CEY early exits added to avoid a 'bug' are really this numerical issue
+///     and yes, the exit provide by this value avoids a class of those early
+///     returns with no roots due the CEY 'patch.' Might eventually consider some
+///     other action, but that patch left as is for now.
 ///
-const PRECISE_FLOAT kSbisectMultRootThreshold = (PRECISE_FLOAT)1e-6;
+const PRECISE_FLOAT kSbisectMultRootThreshold = (PRECISE_FLOAT)1e-10;
 
 /// @var kRegulaFalsaThreshold
 /// const @ref PRECISE_FLOAT threshold below which regula_falsa function is tried
@@ -155,6 +162,11 @@ const PRECISE_FLOAT kRelativeError = (PRECISE_FLOAT)1.0e-12;
 ///
 const DBL kSolveQuadratic_SmallEnough = 1.0e-10;
 
+///@note
+///    The Newton-Raphson root polishing code herein is set up to loop to better solution.
+///    However, the test criterea almost always does just one polishing pass where @ref DBL
+///    set to double. Perhaps later refine the code.
+
 /*****************************************************************************
 * Local typedefs
 ******************************************************************************/
@@ -170,18 +182,15 @@ struct polynomial
 * Static functions
 ******************************************************************************/
 
-static int solve_quadratic (const DBL *x, DBL *y);
-static int solve_cubic (const DBL *x, DBL *y);
-static int solve_quartic (const DBL *x, DBL *y);
-static int polysolve (int order, const DBL *Coeffs, DBL *roots);
-static int modp (const polynomial *u, const polynomial *v, polynomial *r);
+static int modp (const polynomial *u, const polynomial *v, polynomial *r,
+                 PRECISE_FLOAT zeroThreshold);
 static bool regula_falsa (const int order, const PRECISE_FLOAT *coef, PRECISE_FLOAT a,
                           PRECISE_FLOAT b, DBL *val);
 static int sbisect (int np, const polynomial *sseq, PRECISE_FLOAT min, PRECISE_FLOAT max,
                     int atmin, int atmax, DBL *roots);
 static int numchanges (int np, const polynomial *sseq, PRECISE_FLOAT a);
 static PRECISE_FLOAT polyeval (PRECISE_FLOAT x, int n, const PRECISE_FLOAT *Coeffs);
-static int buildsturm (int ord, polynomial *sseq);
+static int buildsturm (int ord, polynomial *sseq, PRECISE_FLOAT zeroThreshold);
 static int visible_roots (int np, const polynomial *sseq);
 
 
@@ -207,6 +216,7 @@ static int visible_roots (int np, const polynomial *sseq);
 *   It returns 0 if r(x) is a constant.
 *
 *   NOTE: This function assumes the leading coefficient of v is 1 or -1.
+*         In more common terms that v is a monic polynomial.
 *
 * CHANGES
 *
@@ -214,7 +224,8 @@ static int visible_roots (int np, const polynomial *sseq);
 *
 ******************************************************************************/
 
-static int modp(const polynomial *u, const polynomial *v, polynomial *r)
+static int modp(const polynomial *u, const polynomial *v, polynomial *r,
+                PRECISE_FLOAT zeroThreshold)
 {
     int k, j;
 
@@ -255,7 +266,7 @@ static int modp(const polynomial *u, const polynomial *v, polynomial *r)
     // this a priori impossible. Too small a value can lead to false roots.
     //
     while (k >= 0 &&
-           PRECISE_FABS(r->coef[k]) < (PRECISE_FLOAT)PRECISE_EPSILON)
+           PRECISE_FABS(r->coef[k]) < zeroThreshold)
     {
         r->coef[k] = (PRECISE_FLOAT)0.0;
 
@@ -295,7 +306,7 @@ static int modp(const polynomial *u, const polynomial *v, polynomial *r)
 *
 ******************************************************************************/
 
-static int buildsturm(int ord, polynomial *sseq)
+static int buildsturm(int ord, polynomial *sseq, PRECISE_FLOAT zeroThreshold)
 {
     int i;
     PRECISE_FLOAT f;
@@ -319,7 +330,7 @@ static int buildsturm(int ord, polynomial *sseq)
 
     /* construct the rest of the Sturm sequence */
 
-    for (sp = sseq + 2; modp(sp - 2, sp - 1, sp); sp++)
+    for (sp = sseq + 2; modp(sp - 2, sp - 1, sp, zeroThreshold); sp++)
     {
         /* reverse the sign and normalize */
 
@@ -441,20 +452,34 @@ static int visible_roots(int np, const polynomial *sseq)
 static int numchanges(int np, const polynomial *sseq, PRECISE_FLOAT a)
 {
     int changes = 0;
-    PRECISE_FLOAT f, lf;
+    PRECISE_FLOAT f, lf, lfNotZero;
     const polynomial *s;
 
     lf = polyeval(a, sseq[0].ord, sseq[0].coef);
+    lfNotZero = 0.0;
 
     for (s = sseq + 1; s <= sseq + np; s++)
     {
         f = polyeval(a, s->ord, s->coef);
 
-        if (lf == (PRECISE_FLOAT)0.0 || lf * f < (PRECISE_FLOAT)0.0)
+        // Original code run 25 years counted multiple zeros as a sign change.
+        // Almost never happens it seems, but zeros should just be skipped and
+        // sign change check made to last non zero value seen.
+        if (lf != (PRECISE_FLOAT)0.0)
         {
-            changes++;
+            if (lf * f < (PRECISE_FLOAT)0.0)
+            {
+                changes++;
+            }
+            lfNotZero = lf;
         }
-
+        else
+        {
+            if (lfNotZero * f < (PRECISE_FLOAT)0.0)
+            {
+                changes++;
+            }
+        }
         lf = f;
     }
 
@@ -488,10 +513,21 @@ static int numchanges(int np, const polynomial *sseq, PRECISE_FLOAT a)
 *   NOTE: This routine has one severe bug: When the interval containing the
 *         root [min, max] has a root at one of its endpoints, as well as one
 *         within the interval, the root at the endpoint will be returned
-*         rather than the one inside. (May, 2018 - Saw no indication of
-*         exactly this though the regula_falsa code prior to changes
-*         often returned false roots at ends if evaluated values very small. The
-*         sturm chain method itself sees roots on intervals of (minv, maxv]).
+*         rather than the one inside. October, 2018. Saw no indication of
+*         exactly this due sbisect though the regula_falsa code prior to recent
+*         changes often returned false roots at ends over real roots if
+*         evaluated values very small. The sturm chain method itself sees
+*         roots on intervals of (minv, maxv] to older literature and testing.
+*         This open low side has the potential to cause issues not in today's
+*         default 0 to upper bound starting case, but should we support a
+*         lower starting bound other than zero(1). In addition low side easy
+*         'fixes' with reasonable performance would themselves be prone to
+*         creating false roots due being value based.
+*
+*  (1) - Such capability would turn our Sturm chain based solver into a
+*  general polynomial solver vs. being a specialized ray tracing one. Further,
+*  min bound, not zero, methods are available which might lead to better
+*  performance if we could pass a lower bound value >0.
 *
 * CHANGES
 *
@@ -775,7 +811,7 @@ static bool regula_falsa(const int order, const PRECISE_FLOAT *coef, PRECISE_FLO
 
                 break;
             }
-            else if (PRECISE_FABS(fx) < PRECISE_EPSILON)
+            else if (PRECISE_FABS(fx) < gkPrecise_epsilon)
             {
                 *val = (DBL)x;
 
@@ -883,7 +919,7 @@ static bool regula_falsa(const int order, const PRECISE_FLOAT *coef, PRECISE_FLO
 *
 ******************************************************************************/
 
-static int solve_quadratic(const DBL *x, DBL *y)
+int solve_quadratic(const DBL *x, DBL *y)
 {
 #if (1)
 
@@ -893,7 +929,9 @@ static int solve_quadratic(const DBL *x, DBL *y)
     //
     // See: "Portable SIMD and the VecCore Library." CERN. December 2016
     //
-    // Numerical issues see: Numerical Recipes in C. 2nd Ed. or newer.
+    // Numerical issues see:
+    //     Numerical Recipes in C. 2nd Ed. or newer.
+    //     https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
     //
 
     PRECISE_FLOAT a = x[0];
@@ -901,9 +939,9 @@ static int solve_quadratic(const DBL *x, DBL *y)
     PRECISE_FLOAT c = x[2];
     PRECISE_FLOAT tmp;
 
-    if (PRECISE_FABS(a) < POV_DBL_EPSILON)
+    if (PRECISE_FABS(a) < gkDBL_epsilon)
     {
-        if (PRECISE_FABS(b) < POV_DBL_EPSILON)
+        if (PRECISE_FABS(b) < gkDBL_epsilon)
         {
             return(0);
         }
@@ -1036,41 +1074,50 @@ static int solve_quadratic(const DBL *x, DBL *y)
 *
 ******************************************************************************/
 
-static int solve_cubic(const DBL *x, DBL *y)
+int solve_cubic(const DBL *x, DBL *y)
 {
     DBL Q, R, Q3, R2, sQ, d, an, theta;
-    DBL A2, a0, a1, a2, a3;
+    DBL A1sqr, a0, a1, a2, a3;
+    int rootCount;
+
+    // @todo
+    //     See GNU GSL library for a version which handles both root multiplicities
+    //     and better real roots near the x axis. Mostly concerned because this
+    //     solver used as part of solve_quartic where such 'clarity' of result
+    //     may matter to that solver's result. What we have here - aside from accuracy
+    //     problems requiring the root polishing - seems to work OK for ray tracing.
+    //     It might be solve_quartic should use a gsl like solve_cubic implementation.
+    //
 
     a0 = x[0];
 
-    if (fabs(a0) < POV_DBL_EPSILON)
+    if (fabs(a0) < gkDBL_epsilon)
     {
         return(solve_quadratic(&x[1], y));
     }
     else
     {
-        if (a0 != 1.0)
-        {
-            a1 = x[1] / a0;
-            a2 = x[2] / a0;
-            a3 = x[3] / a0;
-        }
-        else
-        {
-            a1 = x[1];
-            a2 = x[2];
-            a3 = x[3];
-        }
+        // Note. Code since v1.0 had conditional for a0 == 1 which would avoid the
+        // division by a0 if possible. If in an environment where polynomials more
+        // often in monic form this 'might' make sense. In POV-Ray where very often
+        // not monic and today with SIMD hardware common, it does not.
+        a1 = x[1] / a0;
+        a2 = x[2] / a0;
+        a3 = x[3] / a0;
     }
 
-    A2 = a1 * a1;
+    A1sqr = a1 * a1;
 
-    Q = (A2 - 3.0 * a2) / 9.0;
+    Q = (A1sqr - 3.0 * a2) / 9.0;
+
+    // @todo
+    //     Look to remove the DJGPP bug fix below. While on the surface it removes a couple
+    //     muliplications it forfeits accuracy in the subtraction step within the parenthesis.
 
     /* Modified to save some multiplications and to avoid a floating point
        exception that occured with DJGPP and full optimization. [DB 8/94] */
 
-    R = (a1 * (A2 - 4.5 * a2) + 13.5 * a3) / 27.0;
+    R = (a1 * (A1sqr - 4.5 * a2) + 13.5 * a3) / 27.0;
 
     Q3 = Q * Q * Q;
 
@@ -1094,7 +1141,7 @@ static int solve_cubic(const DBL *x, DBL *y)
         y[1] = sQ * cos(theta + kSolveCubic_2MultPiDiv3) - an;
         y[2] = sQ * cos(theta + kSolveCubic_4MultPiDiv3) - an;
 
-        return(3);
+        rootCount = 3;
     }
     else
     {
@@ -1109,8 +1156,60 @@ static int solve_cubic(const DBL *x, DBL *y)
             y[0] = -(sQ + Q / sQ) - an;
         }
 
-        return(1);
+        rootCount = 1;
     }
+
+    // Newton-Raphson root polishing.
+    PRECISE_FLOAT pv, pvLast, dpv, dt, t;
+
+    auto lambdaCubicPolyValAnDerVal = [&pv,&dpv](const PRECISE_FLOAT t, const DBL *x) -> void
+    {
+         pv  = (PRECISE_FLOAT)x[0] * t + (PRECISE_FLOAT)x[1];
+         dpv = (PRECISE_FLOAT)x[0];
+         for (int k=2; k<=3; k++)
+         {
+             dpv = dpv * t + pv;
+             pv  = pv * t + (PRECISE_FLOAT)x[k];
+         }
+    };
+
+    for (int c = 0; c < rootCount; c++)
+    {
+        if (y[c] <= 0.0)
+        {
+            continue;
+        }
+        t = (PRECISE_FLOAT)y[c];
+        lambdaCubicPolyValAnDerVal(t,&x[0]);
+        pvLast = pv;
+
+        for (int j = 0; j < 7; j++)
+        {
+            if (dpv == 0.0)
+            {
+               break;
+            }
+            else if (pv == 0.0)
+            {
+                y[c] = (DBL)t;
+                break;
+            }
+            dt = pv / dpv;
+            t -= dt;
+
+            lambdaCubicPolyValAnDerVal(t,&x[0]);
+
+            if (PRECISE_FABS(dt) < gkMinIsectDepthReturned)
+            {
+                if (PRECISE_FABS(pv) < PRECISE_FABS(pvLast))
+                {
+                    y[c] = (DBL)t;
+                }
+                break;
+            }
+        }
+    }
+    return(rootCount);
 }
 
 
@@ -1142,7 +1241,7 @@ static int solve_cubic(const DBL *x, DBL *y)
 *
 ******************************************************************************/
 
-static int solve_quartic(const DBL *x, DBL *results)
+int solve_quartic(const DBL *x, DBL *results)
 {
     DBL cubic[4], roots[3];
     DBL a0, a1, y, d1, x1, t1, t2;
@@ -1151,7 +1250,7 @@ static int solve_quartic(const DBL *x, DBL *results)
 
     c0 = x[0];
 
-    if (fabs(c0) < POV_DBL_EPSILON)
+    if (fabs(c0) < gkDBL_epsilon)
     {
         return(solve_cubic(&x[1], results));
     }
@@ -1333,7 +1432,7 @@ static int solve_quartic(const DBL *x, DBL *results)
 *
 ******************************************************************************/
 
-static int solve_quartic(const DBL *x, DBL *results)
+int solve_quartic(const DBL *x, DBL *results)
 {
     DBL cubic[4];
     DBL roots[3];
@@ -1345,26 +1444,20 @@ static int solve_quartic(const DBL *x, DBL *results)
 
     c0 = x[0];
 
-    if (fabs(c0) < POV_DBL_EPSILON)
+    if (fabs(c0) < gkDBL_epsilon)
     {
         return(solve_cubic(&x[1], results));
     }
     else
     {
-        if (c0 != 1.0)
-        {
-            c1 = x[1] / c0;
-            c2 = x[2] / c0;
-            c3 = x[3] / c0;
-            c4 = x[4] / c0;
-        }
-        else
-        {
-            c1 = x[1];
-            c2 = x[2];
-            c3 = x[3];
-            c4 = x[4];
-        }
+        // Note. Code since v1.0 had conditional for c0 == 1 which would avoid the
+        // division by c0 if possible. If in an environment where polynomials more
+        // often in monic form this 'might' make sense. In POV-Ray where very often
+        // not monic and today with SIMD hardware common, it does not.
+        c1 = x[1] / c0;
+        c2 = x[2] / c0;
+        c3 = x[3] / c0;
+        c4 = x[4] / c0;
     }
 
     /* Compute the cubic resolvant */
@@ -1472,7 +1565,7 @@ static int solve_quartic(const DBL *x, DBL *results)
     // that blob 1e-2 value was not large enough to filter all drift to 0+ roots in
     // any case without the polishing below. Newton-Raphson method.
     //
-    PRECISE_FLOAT pv, oldpv, firstpv, dpv, dt, t;
+    PRECISE_FLOAT pv, pvLast, dpv, dt, t;
 
     auto lambdaQuarticPolyValAnDerVal = [&pv,&dpv](const PRECISE_FLOAT t, const DBL *x) -> void
     {
@@ -1480,8 +1573,8 @@ static int solve_quartic(const DBL *x, DBL *results)
          dpv = (PRECISE_FLOAT)x[0];
          for (int k=2; k<=4; k++)
          {
-              dpv = dpv * t + pv;
-              pv  = pv * t + (PRECISE_FLOAT)x[k];
+             dpv = dpv * t + pv;
+             pv  = pv * t + (PRECISE_FLOAT)x[k];
          }
     };
 
@@ -1493,7 +1586,7 @@ static int solve_quartic(const DBL *x, DBL *results)
         }
         t = (PRECISE_FLOAT)results[c];
         lambdaQuarticPolyValAnDerVal(t,&x[0]);
-        firstpv = pv;
+        pvLast = pv;
 
         for (int j = 0; j < 7; j++)
         {
@@ -1511,9 +1604,9 @@ static int solve_quartic(const DBL *x, DBL *results)
 
             lambdaQuarticPolyValAnDerVal(t,&x[0]);
 
-            if (PRECISE_FABS(dt) < MIN_ISECT_DEPTH_RETURNED)
+            if (PRECISE_FABS(dt) < gkMinIsectDepthReturned)
             {
-                if (PRECISE_FABS(pv) < PRECISE_FABS(firstpv))
+                if (PRECISE_FABS(pv) < PRECISE_FABS(pvLast))
                 {
                     results[c] = (DBL)t;
                 }
@@ -1554,12 +1647,13 @@ static int solve_quartic(const DBL *x, DBL *results)
 *
 ******************************************************************************/
 
-static int polysolve(int order, const DBL *Coeffs, DBL *roots)
+int polysolve (int order, const DBL *Coeffs, DBL *roots, DBL HandleCollapsedRootsValue, DBL MaxBound)
 {
     polynomial sseq[MAX_ORDER+1];
     DBL min_value, max_value, max_value2, Abs_Coeff_n;
     int i, nroots, np, atmin, atmax;
     bool potentialLeadingZero = true;
+    PRECISE_FLOAT PreciseFltValue;
 
     //---
     // Reverse coefficients into order used herein.
@@ -1569,14 +1663,14 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     np = 0;
     for (i = 0; i <= order; i++)
     {
-        if (potentialLeadingZero && fabs(Coeffs[i]) < POV_DBL_EPSILON)
+        if (potentialLeadingZero && fabs(Coeffs[i]) < gkDBL_epsilon)
         {
             np++;
         }
         else
         {
             potentialLeadingZero = false;
-          //if (fabs(Coeffs[i]) < POV_DBL_EPSILON)
+          //if (fabs(Coeffs[i]) < gkDBL_epsilon)
           //{
           //    sseq[0].coef[order-i] = (PRECISE_FLOAT)0.0;
           //}
@@ -1593,66 +1687,114 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     }
     else if (order == 1)
     {
-        roots[0] = -sseq[0].coef[0] / sseq[0].coef[1];
+        if (sseq[0].coef[1] != (PRECISE_FLOAT)0.0)
+        {
+            roots[0] = -sseq[0].coef[0] / sseq[0].coef[1];
 
-        return(1);
+            return(1);
+        }
+        else
+        {
+            return(0);
+        }
     }
 
     //---
     // Build the Sturm sequence
-    np = buildsturm(order, &sseq[0]);
 
-    //---
-    // Calculate the total number of visible roots.
+    if (HandleCollapsedRootsValue > 0.0)
+    {
+        nroots = 0;
+
+        PreciseFltValue = HandleCollapsedRootsValue;
+        np = buildsturm(order, &sseq[0], PreciseFltValue);
+
+        // At other than default as zero value to buildsturm above, visible_roots is sometimes
+        // less accurate than numchanges. Using numchanges for nroots calc.
+        atmin = numchanges(np, sseq, (PRECISE_FLOAT)0.0);
+        if (MaxBound > 0.0)
+        {
+            max_value = max(1.0,MaxBound);
+            atmax = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
+        }
+        else
+        {
+            atmax = numchanges(np, sseq, (PRECISE_FLOAT)MAX_DISTANCE);
+        }
+        nroots = atmin - atmax;
+    }
+    else
+    {
+        // So long as incoming coefficients calculated at DBL, set the
+        // efffective zero in following call to gkDBL_epsilon. If selected
+        // shapes move to PRECISE_FLOAT, pass better HandleCollapsedRootsValue
+        //
+        np = buildsturm(order, &sseq[0], (PRECISE_FLOAT)gkDBL_epsilon);
+        nroots = visible_roots(np, sseq);
+    }
+
+    // For total number of visible roots.
     // NOTE: Changed to <=0 test over ==0 due sphere_sweep b_spline
     // going negative when the modp leading coef filter set lower.
     // Similar change to the numchanges based test below.
 
-    if ((nroots = visible_roots(np, sseq)) <= 0)
+    if (nroots <= 0)
     {
         return(0);
     }
 
+
+
     //---
     // Bracket the roots
-    min_value = 0.0;
-    max_value = MAX_DISTANCE;
-
-    // Use variation of Augustin-Louis Cauchy's method to determine an upper bound for max_value.
-
-    // Tighter upper bound found at:
-    //    https://en.wikipedia.org/wiki/Properties_of_polynomial_roots#Other_bounds
-    // which took it from:
-    //    Cohen, Alan M. (2009). "Bounds for the roots of polynomial equations".
-    //    Mathematical Gazette. 93: 87-88.
-    // NOTE: Had to use > 1.0 in max_value2 calculation in practice...
-
-    Abs_Coeff_n = fabs(Coeffs[0]); // Leading zeros dropped above.
-    max_value2  = 1.1 + fabs(Coeffs[1]/Abs_Coeff_n);
-    max_value   = fabs(Coeffs[2]);
-    for (i = 3; i <= order; i++)
+    if (MaxBound > 0.0)
     {
-        max_value = max(fabs(Coeffs[i]),max_value);
-    }
-    max_value /= Abs_Coeff_n + EPSILON;
-    max_value = min(max(max_value,max_value2),MAX_DISTANCE);
+        min_value = 0.0;
+        max_value = max(1.0,MaxBound); // Prevent passed value being too small.
 
-    // NOTE: Found in practice roots occasionally, slightly outside upper bound...
-    // Perhaps related to how the sturm chain is pruned in modp(). Until sorted adding
-    // the following sanity check which restores a MAX_DISTANCE upper bound where
-    // root(s) exists above estimated upper bound.
-
-    atmin = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
-    atmax = numchanges(np, sseq, (PRECISE_FLOAT)MAX_DISTANCE);
-    if ((atmin - atmax) != 0)
-    {
-        max_value = MAX_DISTANCE;
+        atmin = numchanges(np, sseq, (PRECISE_FLOAT)min_value);
+        atmax = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
     }
     else
     {
-        atmax = atmin;
+        min_value = 0.0;
+
+        // Use variation of Augustin-Louis Cauchy's method to determine an upper bound for max_value.
+
+        // Tighter upper bound found at:
+        //    https://en.wikipedia.org/wiki/Properties_of_polynomial_roots#Other_bounds
+        // which took it from:
+        //    Cohen, Alan M. (2009). "Bounds for the roots of polynomial equations".
+        //    Mathematical Gazette. 93: 87-88.
+        // NOTE: Had to use > 1.0 in max_value2 calculation in practice...
+
+        Abs_Coeff_n = fabs(Coeffs[0]); // Leading zeros dropped above.
+        max_value2  = 1.1 + fabs(Coeffs[1]/Abs_Coeff_n);
+        max_value   = fabs(Coeffs[2]);
+        for (i = 3; i <= order; i++)
+        {
+            max_value = max(fabs(Coeffs[i]),max_value);
+        }
+        max_value /= Abs_Coeff_n + EPSILON;
+        max_value = min(max(max_value,max_value2),MAX_DISTANCE);
+
+        // NOTE: Found in practice roots occasionally, slightly outside upper bound...
+        // Perhaps related to how the sturm chain is pruned in modp(). Until sorted adding
+        // the following sanity check which restores a MAX_DISTANCE upper bound where
+        // root(s) exists above estimated upper bound.
+
+        atmin = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
+        atmax = numchanges(np, sseq, (PRECISE_FLOAT)MAX_DISTANCE);
+        if ((atmin - atmax) != 0)
+        {
+            max_value = MAX_DISTANCE;
+        }
+        else
+        {
+            atmax = atmin;
+        }
+        atmin = numchanges(np, sseq, (PRECISE_FLOAT)min_value);
     }
-    atmin = numchanges(np, sseq, (PRECISE_FLOAT)min_value);
 
     nroots = atmin - atmax;
 
@@ -1665,8 +1807,8 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     nroots = sbisect(np, sseq, (PRECISE_FLOAT)min_value, (PRECISE_FLOAT)max_value,
              atmin, atmax, roots);
 
-    // Newton Raphson root polishing step.
-    PRECISE_FLOAT pv, firstpv, dpv, dt, t;
+    // Newton-Raphson root polishing step.
+    PRECISE_FLOAT pv, pvLast, dpv, dt, t;
 
     auto lambdaPolysolvePolyValAnDerVal = [&pv,&dpv]
          (const int ord, const PRECISE_FLOAT t, const polynomial *sseq) -> void
@@ -1675,8 +1817,8 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
          dpv = (PRECISE_FLOAT)sseq[0].coef[ord];
          for (int k=ord-2; k>=0; k--)
          {
-              dpv = dpv * t + pv;
-              pv  = pv * t + (PRECISE_FLOAT)sseq[0].coef[k];
+             dpv = dpv * t + pv;
+             pv  = pv * t + (PRECISE_FLOAT)sseq[0].coef[k];
          }
     };
 
@@ -1684,7 +1826,7 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     {
         t = (PRECISE_FLOAT)roots[c];
         lambdaPolysolvePolyValAnDerVal(order,t,&sseq[0]);
-        firstpv = pv;
+        pvLast = pv;
 
         for (int j = 0; j < 7; j++)
         {
@@ -1702,9 +1844,9 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
 
             lambdaPolysolvePolyValAnDerVal(order,t,&sseq[0]);
 
-            if (PRECISE_FABS(dt) < MIN_ISECT_DEPTH_RETURNED)
+            if (PRECISE_FABS(dt) < gkMinIsectDepthReturned)
             {
-                if (PRECISE_FABS(pv) < PRECISE_FABS(firstpv))
+                if (PRECISE_FABS(pv) < PRECISE_FABS(pvLast))
                 {
                     roots[c] = (DBL)t;
                 }
@@ -1714,191 +1856,6 @@ static int polysolve(int order, const DBL *Coeffs, DBL *roots)
     }
 
     return(nroots);
-}
-
-
-
-/*****************************************************************************
-*
-* FUNCTION
-*
-*   Solve_Polynomial
-*
-* INPUT
-*
-*   n       - order of polynomial
-*   c       - coefficients
-*   r       - roots
-*   sturm   - true, if sturm should be used for n=3,4
-*   epsilon - Tolerance to discard small root
-*
-* OUTPUT
-*
-*   r
-*
-* RETURNS
-*
-*   int - number of roots found
-*
-* AUTHOR
-*
-*   Dieter Bayer
-*
-* DESCRIPTION
-*
-*   Solve the polynomial equation
-*
-*     c[0] * x ^ n + c[1] * x ^ (n-1) + ... + c[n-1] * x + c[n] = 0
-*
-*   If the equation has a root r, |r| < epsilon, this root is eliminated
-*   and the equation of order n-1 will be solved. This will avoid the problem
-*   of "surface acne" in (most) cases while increasing the speed of the
-*   root solving (polynomial's order is reduced by one).
-*
-*   WARNING: This function can only be used for polynomials if small roots
-*   (i.e. |x| < epsilon) are not needed. This is the case for ray/object
-*   intersection tests because only intersections with t > 0 are valid.
-*
-*   NOTE: Only one root at x = 0 will be eliminated.
-*
-*   NOTE: If epsilon = 0 no roots will be eliminated.
-*
-*
-*   The method and idea for root elimination was taken from:
-*
-*     Han-Wen Nienhuys, "Polynomials", Ray Tracing News, July 6, 1994,
-*     Volume 7, Number 3
-*
-*
-* CHANGES
-*
-*   Jul 1994 : Creation.
-*
-******************************************************************************/
-
-int Solve_Polynomial(int n, const DBL *c0, DBL *r, int sturm, DBL epsilon, RenderStatistics& stats)
-{
-    int roots;
-    const DBL *c;
-
-    stats[Polynomials_Tested]++;
-
-    roots = 0;
-
-    c = &c0[0];
-
-    switch (n)
-    {
-        case 0:
-
-            break;
-
-        case 1:
-
-            /* Solve linear polynomial. */
-
-            if (c[0] != 0.0)
-            {
-                r[roots++] = -c[1] / c[0];
-            }
-
-            break;
-
-        case 2:
-
-            /* Solve quadratic polynomial. */
-
-            roots = solve_quadratic(c, r);
-
-            break;
-
-        case 3:
-
-            /* Root elimination? */
-
-            if (epsilon > 0.0)
-            {
-                if ((c[2] != 0.0) && (fabs(c[3]/c[2]) < epsilon))
-                {
-                    stats[Roots_Eliminated]++;
-
-                    roots = solve_quadratic(c, r);
-
-                    break;
-                }
-            }
-
-            /* Solve cubic polynomial. */
-
-            if (sturm)
-            {
-                roots = polysolve(3, c, r);
-            }
-            else
-            {
-                roots = solve_cubic(c, r);
-            }
-
-            break;
-
-        case 4:
-
-            /* Root elimination? */
-
-            if (epsilon > 0.0)
-            {
-                if ((c[3] != 0.0) && (fabs(c[4]/c[3]) < epsilon))
-                {
-                    stats[Roots_Eliminated]++;
-
-                    if (sturm)
-                    {
-                        roots = polysolve(3, c, r);
-                    }
-                    else
-                    {
-                        roots = solve_cubic(c, r);
-                    }
-
-                    break;
-                }
-            }
-
-            /* Solve quartic polynomial. */
-
-            if (sturm)
-            {
-                roots = polysolve(4, c, r);
-            }
-            else
-            {
-                roots = solve_quartic(c, r);
-            }
-
-            break;
-
-        default:
-
-            if (epsilon > 0.0)
-            {
-                if ((c[n-1] != 0.0) && (fabs(c[n]/c[n-1]) < epsilon))
-                {
-                    stats[Roots_Eliminated]++;
-
-                    roots = polysolve(n-1, c, r);
-
-                    break;
-                }
-            }
-
-            /* Solve n-th order polynomial. */
-
-            roots = polysolve(n, c, r);
-
-            break;
-    }
-
-    return(roots);
 }
 
 }

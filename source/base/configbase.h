@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -401,14 +401,14 @@ static constexpr POV_INT64 CX_IPOW(POV_INT64 base, int exp, POV_INT64 result) {
 ///     * solve_quadratic()
 ///
 /// @note
-///     The setting is used to set internal 'constextr int PRECISE_DIG' and
-///     'constexpr DBL PRECISE_EPSILON' typed values.
+///     The setting is used to set internal 'constextr int gkPrecise_dig' and
+///     'constexpr DBL gkPrecise_epsilon' typed values.
 ///
 /// @note
 ///     If @ref PRECISE_FLOAT is set to 'float', 'double' or 'long double', the C++11 standard
 ///     itself defines via cfloat include the macros: FLT_DIG, DBL_DIG, LDBL_DIG, FLT_EPSILON,
-///     DBL_EPSILON, LDBL_EPSILON. These macro values are used to set PRECISE_DIG and
-///     PRECISE_EPSILON values via the C++ constexpr mechanism.
+///     DBL_EPSILON, LDBL_EPSILON. These macro values are used to set gkPrecise_dig and
+///     gkPrecise_epsilon values via the C++ constexpr mechanism.
 ///
 /// @attention
 ///     Math with data types not run in hardware or with awkward bit sizes with
@@ -463,32 +463,33 @@ static constexpr POV_INT64 CX_IPOW(POV_INT64 base, int exp, POV_INT64 result) {
     #define PRECISE_EPSLN 1.92592994438724e-34
 #endif
 
-/// @var PRECISE_FLT
+/// @var gkPrecise_flt
 /// A 'constexpr int' 0 when @ref PRECISE_FLOAT resolves to float type or !=0 otherwise.
 ///
-/// @var PRECISE_DBL
+/// @var gkPrecise_dbl
 /// A 'constexpr int' 0 when @ref PRECISE_FLOAT resolves to double type or !=0 otherwise.
 ///
-/// @var PRECISE_LDBL
+/// @var gkPrecise_ldbl
 /// A 'constexpr int' 0 when @ref PRECISE_FLOAT resolves to long double type or !=0 otherwise.
 ///
-/// @var PRECISE_DIG
+/// @var gkPrecise_dig
 /// A 'constexpr int' maximum decimal digits given @ref PRECISE_FLOAT.
 ///
 /// Set to C+11 standard value where defined and to @ref PRECISE_DIGITS otherwise.
 ///
-constexpr int PRECISE_FLT  = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "float");
-constexpr int PRECISE_DBL  = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "double");
-constexpr int PRECISE_LDBL = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "long double");
+constexpr int gkPrecise_flt  = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "float");
+constexpr int gkPrecise_dbl  = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "double");
+constexpr int gkPrecise_ldbl = CX_STRCMP(CX_XSTR(PRECISE_FLOAT), "long double");
 
-constexpr int PRECISE_DIG  = PRECISE_FLT  ?
-                             PRECISE_DBL  ?
-                             PRECISE_LDBL ? PRECISE_DIGITS
-                             : LDBL_DIG
-                             : DBL_DIG
-                             : FLT_DIG;
+constexpr int gkPrecise_dig =
+    gkPrecise_flt  ?
+    gkPrecise_dbl  ?
+    gkPrecise_ldbl ? PRECISE_DIGITS
+    : LDBL_DIG
+    : DBL_DIG
+    : FLT_DIG;
 
-/// @var PRECISE_EPSILON
+/// @var gkPrecise_epsilon
 /// A 'constexpr DBL' value for minimum epsilon step given @ref PRECISE_FLOAT.
 ///
 /// Set to C+11 standard value*2.0 where defined and to @ref PRECISE_EPSLN*2.0 otherwise.
@@ -497,38 +498,40 @@ constexpr int PRECISE_DIG  = PRECISE_FLT  ?
 ///     Using 2.0 multiplier due maths calculating coefficients for higher order polynomials
 ///     introducing more than single bit/step error in practice.
 ///
-constexpr DBL PRECISE_EPSILON = PRECISE_FLT  ?
-                                PRECISE_DBL  ?
-                                PRECISE_LDBL ? PRECISE_EPSLN*2.0
-                                : LDBL_EPSILON*2.0
-                                : DBL_EPSILON*2.0
-                                : FLT_EPSILON*2.0;
+constexpr DBL gkPrecise_epsilon =
+    gkPrecise_flt  ?
+    gkPrecise_dbl  ?
+    gkPrecise_ldbl ? PRECISE_EPSLN*2.0
+    : LDBL_EPSILON*2.0
+    : DBL_EPSILON*2.0
+    : FLT_EPSILON*2.0;
 
-/// @var POV_DBL_IS_FLT
+/// @var gkDBL_is_flt
 /// A 'constexpr int' 0 when @ref DBL resolves to float type or !=0 otherwise.
 ///
-/// @var POV_DBL_IS_DBL
+/// @var gkDBL_is_dbl
 /// A 'constexpr int' 0 when @ref DBL resolves to double type or !=0 otherwise.
 ///
-/// @var POV_DBL_IS_LDBL
+/// @var gkDBL_is_ldbl
 /// A 'constexpr int' 0 when @ref DBL resolves to long double type or !=0 otherwise.
 ///
-/// @var POV_DBL_DIG
+/// @var gkDBL_dig
 /// A 'constexpr int' value for maximum decimal digits for given @ref DBL.
 ///
 /// Set to C+11 standard value where defined and to @ref PRECISE_DIGITS otherwise.
 ///
-constexpr int POV_DBL_IS_FLT  = CX_STRCMP(CX_XSTR(DBL), "float");
-constexpr int POV_DBL_IS_DBL  = CX_STRCMP(CX_XSTR(DBL), "double");
-constexpr int POV_DBL_IS_LDBL = CX_STRCMP(CX_XSTR(DBL), "long double");
-constexpr int POV_DBL_DIG  = POV_DBL_IS_FLT  ?
-                             POV_DBL_IS_DBL  ?
-                             POV_DBL_IS_LDBL ? PRECISE_DIGITS
-                             : LDBL_DIG
-                             : DBL_DIG
-                             : FLT_DIG;
+constexpr int gkDBL_is_flt  = CX_STRCMP(CX_XSTR(DBL), "float");
+constexpr int gkDBL_is_dbl  = CX_STRCMP(CX_XSTR(DBL), "double");
+constexpr int gkDBL_is_ldbl = CX_STRCMP(CX_XSTR(DBL), "long double");
+constexpr int gkDBL_dig =
+    gkDBL_is_flt  ?
+    gkDBL_is_dbl  ?
+    gkDBL_is_ldbl ? PRECISE_DIGITS
+    : LDBL_DIG
+    : DBL_DIG
+    : FLT_DIG;
 
-/// @var POV_DBL_EPSILON
+/// @var gkDBL_epsilon
 /// A 'constexpr DBL' value for minimum epsilon step for given POV-Ray's @ref DBL.
 ///
 /// Set to C+11 standard value*2.0 where defined and to @ref PRECISE_EPSLN*2.0 otherwise.
@@ -541,24 +544,25 @@ constexpr int POV_DBL_DIG  = POV_DBL_IS_FLT  ?
 ///     Using 2.0 multiplier due maths calculating coefficients for higher order polynomials
 ///     introducing more than single bit/step error in practice.
 ///
-constexpr DBL POV_DBL_EPSILON = POV_DBL_IS_FLT  ?
-                                POV_DBL_IS_DBL  ?
-                                POV_DBL_IS_LDBL ? PRECISE_EPSLN*2.0
-                                : LDBL_EPSILON*2.0
-                                : DBL_EPSILON*2.0
-                                : FLT_EPSILON*2.0;
+constexpr DBL gkDBL_epsilon =
+    gkDBL_is_flt  ?
+    gkDBL_is_dbl  ?
+    gkDBL_is_ldbl ? PRECISE_EPSLN*2.0
+    : LDBL_EPSILON*2.0
+    : DBL_EPSILON*2.0
+    : FLT_EPSILON*2.0;
 
 
-/// @var MIN_ISECT_DEPTH_RETURNED
+/// @var gkMinIsectDepthReturned
 /// A 'constexpr DBL' value below which roots from primitive objects are not returned.
 ///
 /// The value will track @ref DBL float type and is very roughly the square root
-/// of the determined POV_DBL_EPSILON. The plan is to migrate base shapes to
+/// of the determined gkDBL_epsilon. The plan is to migrate base shapes to
 /// this single value instead of the many different thresholds used today.
 /// Aiming for both more accuracy and something which automatically adjust to
 /// the DBL type used.
 ///
-constexpr DBL MIN_ISECT_DEPTH_RETURNED = POV_DBL_EPSILON*(DBL)CX_IPOW(10,POV_DBL_DIG/2+1);
+constexpr DBL gkMinIsectDepthReturned = gkDBL_epsilon*(DBL)CX_IPOW(10,gkDBL_dig/2+1);
 
 /// @}
 ///

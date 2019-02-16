@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2017 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -58,7 +58,7 @@ namespace pov
 ///
 /// @{
 
-#define SPHERE_SWEEP_OBJECT     (BASIC_OBJECT)
+#define SPHERE_SWEEP_OBJECT     (STURM_OK_OBJECT)
 
 /// @}
 ///
@@ -155,7 +155,7 @@ class SphereSweep : public ObjectBase
         ///     (if any), even in the case of a "glancing blow", and with surface normals oriented
         ///     away from the spline "backbone".
         ///
-        static int Intersect_Segment(const BasicRay &ray, const SPHSWEEP_SEG *Segment, SPHSWEEP_INT *Isect, TraceThreadData *Thread);
+        int Intersect_Segment(const BasicRay &ray, const SPHSWEEP_SEG *Segment, SPHSWEEP_INT *Isect, TraceThreadData *Thread);
 
         /// Eliminate interior surfaces.
         ///

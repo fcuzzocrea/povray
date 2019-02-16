@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -119,10 +119,6 @@ namespace pov
 * Local preprocessor defines
 ******************************************************************************/
 
-/* Minimal intersection depth for a valid intersection. */
-
-const DBL DEPTH_TOLERANCE = 1.0e-4;
-
 /* Part of the surface of revolution hit. */
 
 const int BASE_PLANE = 1;
@@ -195,7 +191,7 @@ bool Sor::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadData
 *
 * INPUT
 *
-*   Ray          - Ray
+*   Ray   - Ray
 *   Sor   - Sor
 *   Intersection - Sor intersection structure
 *
@@ -282,11 +278,11 @@ bool Sor::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData *T
 
     best = BOUND_HUGE;
 
-    if (Test_Flag(this, CLOSED_FLAG) && (fabs(D[Y]) > EPSILON))
+    if (Test_Flag(this, CLOSED_FLAG) && (fabs(D[Y]) > gkDBL_epsilon))
     {
         /* Test base plane. */
 
-        if (Base_Radius_Squared > DEPTH_TOLERANCE)
+        if (Base_Radius_Squared > gkMinIsectDepthReturned)
         {
             k = (Height1 - P[Y]) / D[Y];
 
@@ -297,7 +293,7 @@ bool Sor::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData *T
 
             if (b <= Base_Radius_Squared)
             {
-                if (test_hit(ray, Depth_Stack, k / len, k, BASE_PLANE, 0, Thread))
+                if (test_hit(ray, Depth_Stack, len, k / len, k, BASE_PLANE, 0, Thread))
                 {
                     found = true;
 
@@ -311,7 +307,7 @@ bool Sor::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData *T
 
         /* Test cap plane. */
 
-        if (Cap_Radius_Squared > DEPTH_TOLERANCE)
+        if (Cap_Radius_Squared > gkMinIsectDepthReturned)
         {
             k = (Height2 - P[Y]) / D[Y];
 
@@ -322,7 +318,7 @@ bool Sor::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData *T
 
             if (b <= Cap_Radius_Squared)
             {
-                if (test_hit(ray, Depth_Stack, k / len, k, CAP_PLANE, 0, Thread))
+                if (test_hit(ray, Depth_Stack, len, k / len, k, CAP_PLANE, 0, Thread))
                 {
                     found = true;
 
@@ -381,18 +377,30 @@ bool Sor::Intersect(const BasicRay& ray, IStack& Depth_Stack, TraceThreadData *T
 
         x[3] = P[Y] * (P[Y] * (Entry->A * P[Y] + Entry->B) + Entry->C) + Entry->D - P[X] * P[X] - P[Z] * P[Z];
 
-        n = Solve_Polynomial(3, x, y, Test_Flag(this, STURM_FLAG), 0.0, Thread->Stats());
+        if (Test_Flag(this, STURM_FLAG))
+        {
+            n = polysolve(3, x, y, 0.0, 0.0);
+        }
+        else
+        {
+            n = solve_cubic(x, y);
+        }
 
         while (n--)
         {
             k = y[n];
+
+            if ((y[n] <= gkMinIsectDepthReturned) || (y[n] >= MAX_DISTANCE))
+            {
+                continue;
+            }
 
             h = P[Y] + k * D[Y];
 
             if ((h >= Spline->BCyl->height[Spline->BCyl->entry[intervals[j].n].h1]) &&
                 (h <= Spline->BCyl->height[Spline->BCyl->entry[intervals[j].n].h2]))
             {
-                if (test_hit(ray, Depth_Stack, k / len, k, CURVE, intervals[j].n, Thread))
+                if (test_hit(ray, Depth_Stack, len, k / len, k, CURVE, intervals[j].n, Thread))
                 {
                     found = true;
 
@@ -991,8 +999,8 @@ void Sor::Compute_Sor(Vector2d *P, TraceThreadData *Thread)
 
     for (i = 0; i < Number; i++)
     {
-        if ((fabs(P[i+2][Y] - P[i][Y]) < EPSILON) ||
-            (fabs(P[i+3][Y] - P[i+1][Y]) < EPSILON))
+        if ((fabs(P[i+2][Y] - P[i][Y]) < gkMinIsectDepthReturned) ||
+            (fabs(P[i+3][Y] - P[i+1][Y]) < gkMinIsectDepthReturned))
         {
             throw POV_EXCEPTION_STRING("Incorrect point in surface of revolution.");
         }
@@ -1040,10 +1048,10 @@ void Sor::Compute_Sor(Vector2d *P, TraceThreadData *Thread)
         C = k[0] * Mat[2][0] + k[1] * Mat[2][1] + k[2] * Mat[2][2] + k[3] * Mat[2][3];
         D = k[0] * Mat[3][0] + k[1] * Mat[3][1] + k[2] * Mat[3][2] + k[3] * Mat[3][3];
 
-        if (fabs(A) < EPSILON) A = 0.0;
-        if (fabs(B) < EPSILON) B = 0.0;
-        if (fabs(C) < EPSILON) C = 0.0;
-        if (fabs(D) < EPSILON) D = 0.0;
+        if (fabs(A) < gkDBL_epsilon) A = 0.0;
+        if (fabs(B) < gkDBL_epsilon) B = 0.0;
+        if (fabs(C) < gkDBL_epsilon) C = 0.0;
+        if (fabs(D) < gkDBL_epsilon) D = 0.0;
 
         Spline->Entry[i].A = A;
         Spline->Entry[i].B = B;
@@ -1062,7 +1070,7 @@ void Sor::Compute_Sor(Vector2d *P, TraceThreadData *Thread)
         c[1] = 2.0 * B;
         c[2] = C;
 
-        n = Solve_Polynomial(2, c, r, false, 0.0, Thread->Stats());
+        n = solve_quadratic(c, r);
 
         while (n--)
         {
@@ -1177,11 +1185,12 @@ void Sor::Compute_Sor(Vector2d *P, TraceThreadData *Thread)
 *
 ******************************************************************************/
 
-bool Sor::test_hit(const BasicRay &ray, IStack& Depth_Stack, DBL d, DBL k, int t, int n, TraceThreadData *Thread)
+bool Sor::test_hit(const BasicRay &ray, IStack& Depth_Stack, DBL len, DBL d, DBL k,
+                   int t, int n, TraceThreadData *Thread)
 {
     Vector3d IPoint;
 
-    if ((d > DEPTH_TOLERANCE) && (d < MAX_DISTANCE))
+    if ((d > gkMinIsectDepthReturned / len) && (d < MAX_DISTANCE))
     {
         IPoint = ray.Evaluate(d);
 
@@ -1243,7 +1252,7 @@ void Sor::UVCoord(Vector2d& Result, const Intersection *Inter, TraceThreadData *
     /* Determine its angle from the point (1, 0, 0) in the x-z plane. */
     len = P[X] * P[X] + P[Z] * P[Z];
 
-    if (len > EPSILON)
+    if (len > gkDBL_epsilon)
     {
         len = sqrt(len);
         if (P[Z] == 0.0)
