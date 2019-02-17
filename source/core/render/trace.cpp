@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -365,8 +365,8 @@ bool Trace::FindIntersection(ObjectPtr object, Intersection& isect, const Ray& r
             while(depthstack->size() > 0)
             {
                 tmpDepth = depthstack->top().Depth;
-                // TODO FIXME - This was SMALL_TOLERANCE, but that's too rough for some scenes [cjc] need to check what it was in the old code [trf]
-                if(tmpDepth < closest && (ray.IsSubsurfaceRay() || tmpDepth >= MIN_ISECT_DEPTH))
+                POV_ASSERT(tmpDepth > 0.0);  // Shape code should never return intersections <= 0.0.
+                if (tmpDepth < closest)
                 {
                     isect = depthstack->top();
                     closest = tmpDepth;
@@ -418,8 +418,8 @@ bool Trace::FindIntersection(ObjectPtr object, Intersection& isect, const Ray& r
             while(depthstack->size() > 0)
             {
                 tmpDepth = depthstack->top().Depth;
-                // TODO FIXME - This was SMALL_TOLERANCE, but that's too rough for some scenes [cjc] need to check what it was in the old code [trf]
-                if(tmpDepth < closest && (ray.IsSubsurfaceRay() || tmpDepth >= MIN_ISECT_DEPTH) && postcondition(ray, object, tmpDepth))
+                POV_ASSERT(tmpDepth > 0.0);  // Shape code should never return intersections <= 0.0.
+                if (tmpDepth < closest && postcondition(ray, object, tmpDepth))
                 {
                     isect = depthstack->top();
                     closest = tmpDepth;

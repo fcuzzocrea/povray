@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -191,14 +191,6 @@
 /// Maximum distance that qualifies as ray-object intersection.
 ///
 #define MAX_DISTANCE 1.0e7
-
-/// @def MIN_ISECT_DEPTH
-/// Minimum distance that qualifies as ray-object intersection.
-///
-/// @note
-///     Some algorithms use @ref SMALL_TOLERANCE instead.
-///
-#define MIN_ISECT_DEPTH 1.0e-4
 
 /// @}
 ///
