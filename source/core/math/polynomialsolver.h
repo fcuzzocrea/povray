@@ -59,14 +59,11 @@ class RenderStatistics;
 /// Maximum supported polynomial order.
 ///
 /// @todo
-///     This currently carries a large, fixed per polysolve() call
-///     memory allocation on the stack. Size is on the order of
-///     (MAX_ORDER+1)*int + PRECISE_FLOAT * (MAX_ORDER+1)^2
-///     which impacts performance and performance stability especially
-///     for threads > cores. Allocation based on current equation order
-///     would be better. My C++ attempts at this all badly slower. C itself
-///     supports a struct "flexible array member" feature, however this
-///     not a C++11 standard though some C++ compilers support it.
+///     This currently carries a large, fixed, per polysolve() call memory allocation
+///     on the stack. Size is on the order of (MAX_ORDER+1)*int + PRECISE_FLOAT *
+///     (MAX_ORDER+1)^2 which impacts performance and performance stability
+///     especially for threads > physical cores. Allocation based on current
+///     equation order would be better.
 ///
 #define MAX_ORDER 35
 

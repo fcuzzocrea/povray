@@ -182,9 +182,6 @@
 /// @def SMALL_TOLERANCE
 /// Minimum distance that qualifies as ray-object intersection.
 ///
-/// @note
-///     Some algorithms use @ref MIN_ISECT_DEPTH instead.
-///
 #define SMALL_TOLERANCE 0.001
 
 /// @def MAX_DISTANCE

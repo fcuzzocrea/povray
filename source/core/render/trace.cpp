@@ -1934,7 +1934,7 @@ struct NoShadowFlagRayObjectCondition : public RayObjectCondition
 
 struct SmallToleranceRayObjectCondition : public RayObjectCondition
 {
-    virtual bool operator()(const Ray&, ConstObjectPtr, double dist) const { return dist > SMALL_TOLERANCE; }
+    virtual bool operator()(const Ray&, ConstObjectPtr, double dist) const { return dist > SHADOW_TOLERANCE; }
 };
 
 void Trace::TracePointLightShadowRay(const LightSource &lightsource, double& lightsourcedepth, Ray& lightsourceray, MathColour& lightcolour)
@@ -1954,7 +1954,7 @@ void Trace::TracePointLightShadowRay(const LightSource &lightsource, double& lig
         if(FindIntersection(lightsource.Projected_Through_Object, tempIntersection, lightsourceray))
         {
             if((tempIntersection.Depth - lightsourcedepth) < 0.0)
-                projectedDepth = lightsourcedepth - fabs(tempIntersection.Depth) + SMALL_TOLERANCE;
+                projectedDepth = lightsourcedepth - fabs(tempIntersection.Depth) + SHADOW_TOLERANCE;
             else
             {
                 lightcolour.Clear();
@@ -1978,7 +1978,7 @@ void Trace::TracePointLightShadowRay(const LightSource &lightsource, double& lig
 
     // check for object in the light source shadow cache (object that fully shadowed during last test) first
 
-    if(lightsource.lightGroupLight == false) // we don't cache for light groups
+    if (lightsource.lightGroupLight == false) // we don't cache for light groups
     {
         if ((lightsourceray.GetTicket().traceLevel == 2) && (lightSourceLevel1ShadowCache[lightsource.index] != nullptr))
             cacheObject = lightSourceLevel1ShadowCache[lightsource.index];
@@ -1988,7 +1988,8 @@ void Trace::TracePointLightShadowRay(const LightSource &lightsource, double& lig
         // if there was an object in the light source shadow cache, check that first
         if (cacheObject != nullptr)
         {
-            if(FindIntersection(cacheObject, boundedIntersection, lightsourceray, lightsourcedepth - projectedDepth) == true)
+            if (FindIntersection(cacheObject, boundedIntersection, lightsourceray,
+                postcond, lightsourcedepth - projectedDepth) == true)
             {
                 if(!Test_Flag(boundedIntersection.Object, NO_SHADOW_FLAG))
                 {
@@ -2007,7 +2008,16 @@ void Trace::TracePointLightShadowRay(const LightSource &lightsource, double& lig
                     cacheObject = nullptr;
             }
             else
-                cacheObject = nullptr;
+            {
+                if (lightsourceray.GetTicket().traceLevel == 2)
+                {
+                    lightSourceLevel1ShadowCache[lightsource.index] = nullptr;
+                }
+                else
+                {
+                    lightSourceOtherShadowCache[lightsource.index] = nullptr;
+                }
+            }
         }
     }
 
