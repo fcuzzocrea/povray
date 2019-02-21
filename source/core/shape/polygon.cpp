@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -817,22 +817,22 @@ void Polygon::Compute_BBox()
 
     Make_BBox_from_min_max(BBox, Min, Max);
 
-    if (fabs(BBox.size[X]) < SMALL_TOLERANCE)
+    if (fabs(BBox.size[X]) < gkMinIsectDepthReturned)
     {
-        BBox.lowerLeft[X] -= SMALL_TOLERANCE;
-        BBox.size[X]    += 2.0 * SMALL_TOLERANCE;
+        BBox.lowerLeft[X] -= gkMinIsectDepthReturned;
+        BBox.size[X]    += 2.0 * gkMinIsectDepthReturned;
     }
 
-    if (fabs(BBox.size[Y]) < SMALL_TOLERANCE)
+    if (fabs(BBox.size[Y]) < gkMinIsectDepthReturned)
     {
-        BBox.lowerLeft[Y] -= SMALL_TOLERANCE;
-        BBox.size[Y]    += 2.0 * SMALL_TOLERANCE;
+        BBox.lowerLeft[Y] -= gkMinIsectDepthReturned;
+        BBox.size[Y]    += 2.0 * gkMinIsectDepthReturned;
     }
 
-    if (fabs(BBox.size[Z]) < SMALL_TOLERANCE)
+    if (fabs(BBox.size[Z]) < gkMinIsectDepthReturned)
     {
-        BBox.lowerLeft[Z] -= SMALL_TOLERANCE;
-        BBox.size[Z]    += 2.0 * SMALL_TOLERANCE;
+        BBox.lowerLeft[Z] -= gkMinIsectDepthReturned;
+        BBox.size[Z]    += 2.0 * gkMinIsectDepthReturned;
     }
 }
 

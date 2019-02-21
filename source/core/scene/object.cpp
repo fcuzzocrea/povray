@@ -903,25 +903,25 @@ ObjectPtr CompoundObject::Invert()
 
 bool ObjectBase::Intersect_BBox(BBoxDirection variant, const BBoxVector3d& origin, const BBoxVector3d& invdir, BBoxScalar maxd) const
 {
-    // reverted to SMALL_TOLERANCE over v3.7 MIN_ISECT_DEPTH, for FS324 [jg] old code [trf]
+    // gkDBL_epsilon(4.4e-16) now used over SMALL_TOLERANCE(1e-3) or v3.7 MIN_ISECT_DEPTH(1e-4).
     switch(variant)
     {
         case BBOX_DIR_X0Y0Z0: // 000
-            return Intersect_BBox_Dir<0, 0, 0>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<0, 0, 0>(BBox, origin, invdir, gkDBL_epsilon, maxd);
         case BBOX_DIR_X0Y0Z1: // 001
-            return Intersect_BBox_Dir<0, 0, 1>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<0, 0, 1>(BBox, origin, invdir, gkDBL_epsilon, maxd);
         case BBOX_DIR_X0Y1Z0: // 010
-            return Intersect_BBox_Dir<0, 1, 0>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<0, 1, 0>(BBox, origin, invdir, gkDBL_epsilon, maxd);
         case BBOX_DIR_X0Y1Z1: // 011
-            return Intersect_BBox_Dir<0, 1, 1>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<0, 1, 1>(BBox, origin, invdir, gkDBL_epsilon, maxd);
         case BBOX_DIR_X1Y0Z0: // 100
-            return Intersect_BBox_Dir<1, 0, 0>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<1, 0, 0>(BBox, origin, invdir, gkDBL_epsilon, maxd);
         case BBOX_DIR_X1Y0Z1: // 101
-            return Intersect_BBox_Dir<1, 0, 1>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<1, 0, 1>(BBox, origin, invdir, gkDBL_epsilon, maxd);
         case BBOX_DIR_X1Y1Z0: // 110
-            return Intersect_BBox_Dir<1, 1, 0>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<1, 1, 0>(BBox, origin, invdir, gkDBL_epsilon, maxd);
         case BBOX_DIR_X1Y1Z1: // 111
-            return Intersect_BBox_Dir<1, 1, 1>(BBox, origin, invdir, SMALL_TOLERANCE, maxd);
+            return Intersect_BBox_Dir<1, 1, 1>(BBox, origin, invdir, gkDBL_epsilon, maxd);
     }
 
     return false; // unreachable

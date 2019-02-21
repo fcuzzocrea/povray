@@ -179,11 +179,6 @@
     #define BOUND_HUGE 2.0e+10
 #endif
 
-/// @def SMALL_TOLERANCE
-/// Minimum distance that qualifies as ray-object intersection.
-///
-#define SMALL_TOLERANCE 0.001
-
 /// @def MAX_DISTANCE
 /// Maximum distance that qualifies as ray-object intersection.
 ///

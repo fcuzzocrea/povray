@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -714,7 +714,7 @@ void MediaFunction::ComputeOneMediaLightInterval(LightSource *light, LightSource
     {
         case CYLINDER_SOURCE:
             if(ComputeCylinderLightInterval(ray, light, &t1, &t2))
-                insert = ((t1 < isect.Depth) && (t2 > SMALL_TOLERANCE));
+                insert = ((t1 < isect.Depth) && (t2 > gkMinIsectDepthReturned));
             break;
         case POINT_SOURCE:
             t1 = 0.0;
@@ -723,7 +723,7 @@ void MediaFunction::ComputeOneMediaLightInterval(LightSource *light, LightSource
             break;
         case SPOT_SOURCE:
             if(ComputeSpotLightInterval(ray, light, &t1, &t2))
-                insert = ((t1 < isect.Depth) && (t2 > SMALL_TOLERANCE));
+                insert = ((t1 < isect.Depth) && (t2 > gkMinIsectDepthReturned));
             break;
     }
 

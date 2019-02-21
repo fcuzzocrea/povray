@@ -294,7 +294,7 @@ bool Blob::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
 
     /* To avoid numerical problems we start at the first interval. */
 
-    if ((start_dist = intervals[0].bound) < SMALL_TOLERANCE)
+    if ((start_dist = intervals[0].bound) < gkMinIsectDepthReturned)
     {
         start_dist = 0.0;
     }

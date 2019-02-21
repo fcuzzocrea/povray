@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2017 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -431,7 +431,7 @@ Disc::Disc() : ObjectBase(DISC_OBJECT)
 
     /* Default bounds */
 
-    Make_BBox(BBox, -1.0, -1.0, -SMALL_TOLERANCE, 2.0,  2.0, 2.0 * SMALL_TOLERANCE);
+    Make_BBox(BBox, -1.0, -1.0, -gkMinIsectDepthReturned, 2.0,  2.0, 2.0 * gkMinIsectDepthReturned);
 }
 
 
@@ -581,7 +581,8 @@ void Disc::Compute_BBox()
 
     rad = sqrt(oradius2);
 
-    Make_BBox(BBox, -rad, -rad, -SMALL_TOLERANCE, 2.0*rad, 2.0*rad, 2.0*SMALL_TOLERANCE);
+    Make_BBox(BBox, -rad, -rad, -gkMinIsectDepthReturned,
+              2.0*rad, 2.0*rad, 2.0*gkMinIsectDepthReturned);
 
     Recompute_BBox(&BBox, Trans);
 }
