@@ -14,7 +14,7 @@
 /// ----------------------------------------------------------------------------
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -8617,22 +8617,26 @@ DBL SoftObjectPattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *p
         VirtBBoxLL.z() = floor((EPoint.z()/spacing-3.0))*spacing;
 
         // The following BBOX pre-filter mostly helps - 5% faster in testing where shape <2/3 volume/pattern surface.
-        // MIN_ISECT_DEPTH used, DBL cast & slows filter due SNGL bbox values.
+        // Move to SOFTHARD_TMPVAL to gkMinIsectDepthReturned if available after re-base. DBL cast & slows filter due SNGL bbox values.
+        //         SOFTHARD_TMPVAL being used for now so this can still be merged into master alone.
+#define SOFTHARD_TMPVAL 4.4e-8
+
         VirtBBoxSize.x() =
         VirtBBoxSize.y() =
         VirtBBoxSize.z() = 8.0*spacing;
 
-        if((VirtBBoxLL.x()-MIN_ISECT_DEPTH > (DBL)pObject->BBox.lowerLeft.x()+(DBL)pObject->BBox.size.x()) ||
-           (VirtBBoxLL.y()-MIN_ISECT_DEPTH > (DBL)pObject->BBox.lowerLeft.y()+(DBL)pObject->BBox.size.y()) ||
-           (VirtBBoxLL.z()-MIN_ISECT_DEPTH > (DBL)pObject->BBox.lowerLeft.z()+(DBL)pObject->BBox.size.z())
+        if((VirtBBoxLL.x()-SOFTHARD_TMPVAL > (DBL)pObject->BBox.lowerLeft.x()+(DBL)pObject->BBox.size.x()) ||
+           (VirtBBoxLL.y()-SOFTHARD_TMPVAL > (DBL)pObject->BBox.lowerLeft.y()+(DBL)pObject->BBox.size.y()) ||
+           (VirtBBoxLL.z()-SOFTHARD_TMPVAL > (DBL)pObject->BBox.lowerLeft.z()+(DBL)pObject->BBox.size.z())
           )
             return(0.0);
-        if((VirtBBoxLL.x()+VirtBBoxSize.x()+MIN_ISECT_DEPTH < (DBL)pObject->BBox.lowerLeft.x()) ||
-           (VirtBBoxLL.y()+VirtBBoxSize.y()+MIN_ISECT_DEPTH < (DBL)pObject->BBox.lowerLeft.y()) ||
-           (VirtBBoxLL.z()+VirtBBoxSize.z()+MIN_ISECT_DEPTH < (DBL)pObject->BBox.lowerLeft.z())
+        if((VirtBBoxLL.x()+VirtBBoxSize.x()+SOFTHARD_TMPVAL < (DBL)pObject->BBox.lowerLeft.x()) ||
+           (VirtBBoxLL.y()+VirtBBoxSize.y()+SOFTHARD_TMPVAL < (DBL)pObject->BBox.lowerLeft.y()) ||
+           (VirtBBoxLL.z()+VirtBBoxSize.z()+SOFTHARD_TMPVAL < (DBL)pObject->BBox.lowerLeft.z())
           )
             return(0.0);
         // End BBOX pre-filter
+#undef SOFTHARD_TMPVAL
 
         size_t i, j, k;
         Vector3d thisVoxel;

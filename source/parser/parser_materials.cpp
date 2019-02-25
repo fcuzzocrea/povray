@@ -886,8 +886,12 @@ PatternPtr Parser::ParseHardObjectPattern()
                                                               "hard_object recursion_limit minimum");
         END_CASE
         CASE (RADIUS_TOKEN)
-            // MIN_ISECT_DEPTH+ EPSILON prevents ray alignment FP noise.
-            pattern->radius = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON;
+            //         SOFTHARD_TMPVAL being used for now so this can still be merged into master alone.
+#define SOFTHARD_TMPVAL 4.4e-8
+            // Move to gkMinIsectDepthReturned + gkDBL_epsilon. prevents ray alignment FP noise.
+            //         SOFTHARD_TMPVAL being used for now so this can still be merged into master alone.
+            pattern->radius = max(Parse_Float(),SOFTHARD_TMPVAL)+EPSILON;
+#undef SOFTHARD_TMPVAL
         END_CASE
         CASE (SAMPLES_TOKEN)
             pattern->samples = (size_t) Parse_Int_With_Minimum(kHard_ObjectSamples_Min,"hard_object samples minimum");
@@ -1104,8 +1108,11 @@ PatternPtr Parser::ParseSoftObjectPattern()
 
     EXPECT
         CASE (SPACING_TOKEN)
-            // EPSILON prevents grid/ray FP noise.
-            pattern->spacing = max(Parse_Float(),MIN_ISECT_DEPTH)+EPSILON;
+#define SOFTHARD_TMPVAL 4.4e-8
+            // Move to gkMinIsectDepthReturned + gkDBL_epsilon. Ray alignment FP noise.
+            //         SOFTHARD_TMPVAL being used for now so this can still be merged into master alone.
+            pattern->spacing = max(Parse_Float(),SOFTHARD_TMPVAL) + EPSILON;
+#undef SOFTHARD_TMPVAL
         END_CASE
         CASE (STRENGTH_TOKEN)
             pattern->strength = max(Parse_Float(),EPSILON);
