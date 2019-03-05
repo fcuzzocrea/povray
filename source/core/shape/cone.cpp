@@ -10,7 +10,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -54,8 +54,6 @@ namespace pov
 /*****************************************************************************
 * Local preprocessor defines
 ******************************************************************************/
-
-const DBL Cone_Tolerance = 1.0e-9;
 
 #define close(x, y) (fabs(x-y) < EPSILON ? 1 : 0)
 
@@ -186,7 +184,8 @@ int Cone::Intersect(const BasicRay& ray, CONE_INT *Intersection, TraceThreadData
 
                 z = P[Z] + t1 * D[Z];
 
-                if ((t1 > Cone_Tolerance) && (t1 < MAX_DISTANCE) && (z >= 0.0) && (z <= 1.0))
+                if ((t1 > gkMinIsectDepthReturned) && (t1 < MAX_DISTANCE) &&
+                    (z >= 0.0) && (z <= 1.0))
                 {
                     Intersection[i].d   = t1 / len;
                     Intersection[i++].t = SIDE_HIT;
@@ -194,7 +193,8 @@ int Cone::Intersect(const BasicRay& ray, CONE_INT *Intersection, TraceThreadData
 
                 z = P[Z] + t2 * D[Z];
 
-                if ((t2 > Cone_Tolerance) && (t2 < MAX_DISTANCE) && (z >= 0.0) && (z <= 1.0))
+                if ((t2 > gkMinIsectDepthReturned) && (t2 < MAX_DISTANCE) &&
+                    (z >= 0.0) && (z <= 1.0))
                 {
                     Intersection[i].d   = t2 / len;
                     Intersection[i++].t = SIDE_HIT;
@@ -222,7 +222,8 @@ int Cone::Intersect(const BasicRay& ray, CONE_INT *Intersection, TraceThreadData
 
                 z = P[Z] + t1 * D[Z];
 
-                if ((t1 > Cone_Tolerance) && (t1 < MAX_DISTANCE) && (z >= dist) && (z <= 1.0))
+                if ((t1 > gkMinIsectDepthReturned) && (t1 < MAX_DISTANCE) &&
+                    (z >= dist) && (z <= 1.0))
                 {
                     Intersection[i].d   = t1 / len;
                     Intersection[i++].t = SIDE_HIT;
@@ -244,7 +245,8 @@ int Cone::Intersect(const BasicRay& ray, CONE_INT *Intersection, TraceThreadData
 
                 z = P[Z] + t1 * D[Z];
 
-                if ((t1 > Cone_Tolerance) && (t1 < MAX_DISTANCE) && (z >= dist) && (z <= 1.0))
+                if ((t1 > gkMinIsectDepthReturned) && (t1 < MAX_DISTANCE) &&
+                    (z >= dist) && (z <= 1.0))
                 {
                     Intersection[i].d   = t1 / len;
                     Intersection[i++].t = SIDE_HIT;
@@ -252,7 +254,8 @@ int Cone::Intersect(const BasicRay& ray, CONE_INT *Intersection, TraceThreadData
 
                 z = P[Z] + t2 * D[Z];
 
-                if ((t2 > Cone_Tolerance) && (t2 < MAX_DISTANCE) && (z >= dist) && (z <= 1.0))
+                if ((t2 > gkMinIsectDepthReturned) && (t2 < MAX_DISTANCE) &&
+                    (z >= dist) && (z <= 1.0))
                 {
                     Intersection[i].d   = t2 / len;
                     Intersection[i++].t = SIDE_HIT;
@@ -269,7 +272,7 @@ int Cone::Intersect(const BasicRay& ray, CONE_INT *Intersection, TraceThreadData
 
         b = (P[Y] + d * D[Y]);
 
-        if (((Sqr(a) + Sqr(b)) <= 1.0) && (d > Cone_Tolerance) && (d < MAX_DISTANCE))
+        if (((Sqr(a) + Sqr(b)) <= 1.0) && (d > gkMinIsectDepthReturned) && (d < MAX_DISTANCE))
         {
             Intersection[i].d   = d / len;
             Intersection[i++].t = CAP_HIT;
@@ -282,7 +285,7 @@ int Cone::Intersect(const BasicRay& ray, CONE_INT *Intersection, TraceThreadData
         b = (P[Y] + d * D[Y]);
 
         if ((Sqr(a) + Sqr(b)) <= (Test_Flag(this, CYLINDER_FLAG) ? 1.0 : Sqr(dist))
-            && (d > Cone_Tolerance) && (d < MAX_DISTANCE))
+            && (d > gkMinIsectDepthReturned) && (d < MAX_DISTANCE))
         {
             Intersection[i].d   = d / len;
             Intersection[i++].t = BASE_HIT;
