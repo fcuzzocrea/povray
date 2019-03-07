@@ -537,12 +537,12 @@ constexpr int gkDBL_dig =
 /// Set to C+11 standard value*2.0 where defined and to @ref PRECISE_EPSLN*2.0 otherwise.
 ///
 /// Using this value where we want a more accurate 'meaningful value not zero' tests than
-/// the EPSILON, SMALL_ENOUGH, etc. values which tend to be around 1e-10 which is much larger
+/// the EPSILON, etc. values which tend to be around 1e-10 which is much larger
 /// than, for example, the double DBL_EPSILON value of 2.2204460492503131e-16.
 ///
 /// @note
 ///     Using 2.0 multiplier due maths calculating coefficients for higher order polynomials
-///     introducing more than single bit/step error in practice.
+///     introducing more than single bit/step error in practice. (at double currently 4.4e-16)
 ///
 constexpr DBL gkDBL_epsilon =
     gkDBL_is_flt  ?
@@ -560,7 +560,7 @@ constexpr DBL gkDBL_epsilon =
 /// of the determined gkDBL_epsilon. The plan is to migrate base shapes to
 /// this single value instead of the many different thresholds used today.
 /// Aiming for both more accuracy and something which automatically adjust to
-/// the DBL type used.
+/// the DBL type used. (at double currently 4.4e-8)
 ///
 constexpr DBL gkMinIsectDepthReturned = gkDBL_epsilon*(DBL)CX_IPOW(10,gkDBL_dig/2+1);
 
