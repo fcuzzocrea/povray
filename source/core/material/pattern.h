@@ -8,7 +8,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2017 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -38,12 +38,16 @@
 
 // Module config header file must be the first file included within POV-Ray unit header files
 #include "core/configcore.h"
+#include "core/material/pattern_fwd.h"
 
-#include <boost/functional/hash/hash.hpp> // required for crackle
-#include <boost/unordered_map.hpp>
+// C++ variants of C standard header files
+// C++ standard header files
+//  (none at the moment)
 
-#include "base/fileinputoutput.h"
+// POV-Ray header files (base module)
+#include "base/fileinputoutput_fwd.h"
 
+// POV-Ray header files (core module)
 #include "core/coretypes.h"
 #include "core/material/pigment.h"
 #include "core/material/warp.h"
@@ -313,7 +317,7 @@ struct ContinuousPattern : public BasicPattern
     ///                             crackle pattern, store cached data here.
     /// @return                     The pattern's value at the given point in space.
     ///
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override final;
 
     /// Evaluates the pattern at a given point in space, without taking into account the wave function.
     ///
@@ -329,34 +333,34 @@ struct ContinuousPattern : public BasicPattern
     ///
     virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const = 0;
 
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
-    virtual bool CanMap() const;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
+    virtual bool CanMap() const override;
 };
 
 /// Abstract class providing additions to the basic pattern interface, as well as common code, for all
 /// discrete pattern implementations.
 struct DiscretePattern : public BasicPattern
 {
-    virtual bool CanMap() const;
+    virtual bool CanMap() const override;
 };
 
 /// Implements a plain pattern with all-zero values for any point in space.
-struct PlainPattern : public DiscretePattern
+struct PlainPattern final : public DiscretePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
-    virtual bool HasSpecialTurbulenceHandling() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
+    virtual bool HasSpecialTurbulenceHandling() const override;
 };
 
 /// Implements a dummy pattern for `average` pseudo-pattern.
-struct AveragePattern : public BasicPattern
+struct AveragePattern final : public BasicPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
-    virtual bool HasSpecialTurbulenceHandling() const;
-    virtual bool CanMap() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
+    virtual bool HasSpecialTurbulenceHandling() const override;
+    virtual bool CanMap() const override;
 };
 
 /// Class providing additional data members for image-based patterns.
@@ -377,34 +381,34 @@ struct ImagePatternImpl
 // Miscellaneous Patterns
 
 /// Implements the `agate` pattern.
-struct AgatePattern : public ContinuousPattern
+struct AgatePattern final : public ContinuousPattern
 {
     /// `agate_turb` parameter.
     SNGL agateTurbScale;
 
     AgatePattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual bool Precompute();
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual bool Precompute() override;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
 };
 
 /// Implements the `aoi` pattern.
-struct AOIPattern : public ContinuousPattern
+struct AOIPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `boxed` pattern.
-struct BoxedPattern : public ContinuousPattern
+struct BoxedPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `brick` pattern.
-struct BrickPattern : public DiscretePattern
+struct BrickPattern final : public DiscretePattern
 {
     /// `brick_size` parameter.
     Vector3d brickSize;
@@ -413,30 +417,30 @@ struct BrickPattern : public DiscretePattern
     SNGL mortar;
 
     BrickPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
 };
 
 /// Implements the `cells` pattern.
-struct CellsPattern : public ContinuousPattern
+struct CellsPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `checker` pattern.
-struct CheckerPattern : public DiscretePattern
+struct CheckerPattern final : public DiscretePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
 };
 
 /// Implements the `crackle` pattern.
-struct CracklePattern : public ContinuousPattern
+struct CracklePattern final : public ContinuousPattern
 {
     Vector3d crackleForm;
     DBL crackleMetric;
@@ -445,34 +449,34 @@ struct CracklePattern : public ContinuousPattern
     bool crackleIsSolid;
 
     CracklePattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `cubic` pattern.
-struct CubicPattern : public DiscretePattern
+struct CubicPattern final : public DiscretePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
 };
 
 /// Implements the `cylindrical` pattern.
-struct CylindricalPattern : public ContinuousPattern
+struct CylindricalPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `density_file` pattern.
 ///
 /// @todo   The additional member variables should be encapsulated.
 ///
-struct DensityFilePattern : public ContinuousPattern
+struct DensityFilePattern final : public ContinuousPattern
 {
     /// @todo fix the members to match naming conventions
-    struct DensityFileDataStruct
+    struct DensityFileDataStruct final
     {
         int References;
         char *Name;
@@ -486,7 +490,7 @@ struct DensityFilePattern : public ContinuousPattern
         };
     };
     /// @todo fix the members to match naming conventions
-    struct DensityFileStruct
+    struct DensityFileStruct final
     {
         int Interpolation; ///< one of @ref DensityFileInterpolationType
         DensityFileDataStruct *Data;
@@ -496,64 +500,64 @@ struct DensityFilePattern : public ContinuousPattern
 
     DensityFilePattern();
     DensityFilePattern(const DensityFilePattern& obj);
-    virtual ~DensityFilePattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual ~DensityFilePattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
-typedef struct DensityFilePattern::DensityFileStruct     DENSITY_FILE;      ///< @deprecated @ref DensityFilePattern::DensityFileStruct should be used instead.
-typedef struct DensityFilePattern::DensityFileDataStruct DENSITY_FILE_DATA; ///< @deprecated @ref DensityFilePattern::DensityFileDataStruct should be used instead.
+using DENSITY_FILE      = DensityFilePattern::DensityFileStruct;      ///< @deprecated @ref DensityFilePattern::DensityFileStruct should be used instead.
+using DENSITY_FILE_DATA = DensityFilePattern::DensityFileDataStruct ; ///< @deprecated @ref DensityFilePattern::DensityFileDataStruct should be used instead.
 
 /// Implements the `dents` pattern.
-struct DentsPattern : public ContinuousPattern
+struct DentsPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `facets` pattern.
-struct FacetsPattern : public ContinuousPattern
+struct FacetsPattern final : public ContinuousPattern
 {
     DBL facetsSize, facetsCoords, facetsMetric;
 
     FacetsPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
 
     /// @attention  As the `facets` pattern is only available for normals, this function is not supposed to be ever
     ///             called, and will throw an exception.
     ///
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `function` pattern.
 ///
 /// @todo   The additional member variables should be encapsulated.
 ///
-struct FunctionPattern : public ContinuousPattern
+struct FunctionPattern final : public ContinuousPattern
 {
     GenericScalarFunctionPtr pFn;
 
     FunctionPattern();
     FunctionPattern(const FunctionPattern& obj);
-    virtual ~FunctionPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual ~FunctionPattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `gradient` pattern.
-struct GradientPattern : public ContinuousPattern
+struct GradientPattern final : public ContinuousPattern
 {
     /// Direction of the gradient.
     Vector3d gradient;
 
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `granite` pattern.
-struct GranitePattern : public ContinuousPattern
+struct GranitePattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `hard_object` pattern.
@@ -569,10 +573,10 @@ struct HardObjectPattern : public ContinuousPattern
 
     HardObjectPattern();
     HardObjectPattern(const HardObjectPattern& obj);
-    virtual ~HardObjectPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual ~HardObjectPattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
     virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection,
-                            const Ray *pRay, TraceThreadData *pThread) const;
+                            const Ray *pRay, TraceThreadData *pThread) const override;
     inline bool Inside(const Vector3d& EPoint, const Vector3d& MoveBy, TraceThreadData *pThread) const;
     bool SphericalSamplesInside(const Vector3d& EPoint, const DBL& TestRadius,
                                 const size_t& samples, TraceThreadData *pThread) const;
@@ -581,37 +585,37 @@ struct HardObjectPattern : public ContinuousPattern
 };
 
 /// Implements the `hexagon` pattern.
-struct HexagonPattern : public DiscretePattern
+struct HexagonPattern final : public DiscretePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
 };
 
 /// Implements image-based mapped patterns.
-struct ImagePattern : public ContinuousPattern, public ImagePatternImpl
+struct ImagePattern final : public ContinuousPattern, public ImagePatternImpl
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `leopard` pattern.
-struct LeopardPattern : public ContinuousPattern
+struct LeopardPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `marble` pattern.
-struct MarblePattern : public ContinuousPattern
+struct MarblePattern final : public ContinuousPattern
 {
     MarblePattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual bool Precompute();
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual bool HasSpecialTurbulenceHandling() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual bool Precompute() override;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual bool HasSpecialTurbulenceHandling() const override;
 
 protected:
 
@@ -621,33 +625,33 @@ protected:
 /// Base class for the noise-based patterns.
 struct NoisePattern : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const = 0;
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override = 0;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `object` pattern.
 ///
 /// @todo   The additional member variables should possibly be encapsulated.
 ///
-struct ObjectPattern : public DiscretePattern
+struct ObjectPattern final : public DiscretePattern
 {
     ObjectPtr pObject;
 
     ObjectPattern();
     ObjectPattern(const ObjectPattern& obj);
-    virtual ~ObjectPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual ~ObjectPattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
     virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection,
-                         const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
+                         const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
 };
 
 /// Implements the `onion` pattern.
-struct OnionPattern : public ContinuousPattern
+struct OnionPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `pavement` pattern.
@@ -655,7 +659,7 @@ struct OnionPattern : public ContinuousPattern
 /// @todo   We should probably implement this as one class per pavement type, possibly all declared in @ref pattern.cpp
 ///         and instantiated via a static factory method in this class.
 ///
-struct PavementPattern : public ContinuousPattern
+struct PavementPattern final : public ContinuousPattern
 {
     unsigned char Side;
     unsigned char Tile;
@@ -665,8 +669,8 @@ struct PavementPattern : public ContinuousPattern
     unsigned char Form;
 
     PavementPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
     DBL hexagonal (const Vector3d& EPoint) const;
     DBL trigonal (const Vector3d& EPoint) const;
     DBL tetragonal (const Vector3d& EPoint) const;
@@ -676,63 +680,63 @@ struct PavementPattern : public ContinuousPattern
 ///
 /// @todo   The additional member variables should possibly be encapsulated.
 ///
-struct PigmentPattern : public ContinuousPattern
+struct PigmentPattern final : public ContinuousPattern
 {
     PIGMENT *pPigment;
 
     PigmentPattern();
     PigmentPattern(const PigmentPattern& obj);
-    virtual ~PigmentPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual ~PigmentPattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `planar` pattern.
-struct PlanarPattern : public ContinuousPattern
+struct PlanarPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `potential` pattern.
 ///
 /// @todo   The additional member variables should possibly be encapsulated.
 ///
-struct PotentialPattern : public ContinuousPattern
+struct PotentialPattern final : public ContinuousPattern
 {
     ObjectPtr   pObject;
     bool        subtractThreshold;
 
     PotentialPattern();
     PotentialPattern(const PotentialPattern& obj);
-    virtual ~PotentialPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual ~PotentialPattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `quilted` pattern.
-struct QuiltedPattern : public ContinuousPattern
+struct QuiltedPattern final : public ContinuousPattern
 {
     SNGL Control0, Control1;
 
     QuiltedPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `radial` pattern.
-struct RadialPattern : public ContinuousPattern
+struct RadialPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
 };
 
 /// Implements the `ripples` pattern.
-struct RipplesPattern : public ContinuousPattern
+struct RipplesPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `soft_object` pattern.
@@ -747,10 +751,10 @@ struct SoftObjectPattern : public ContinuousPattern
 
     SoftObjectPattern();
     SoftObjectPattern(const SoftObjectPattern& obj);
-    virtual ~SoftObjectPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual ~SoftObjectPattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
     virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection,
-                            const Ray *pRay, TraceThreadData *pThread) const;
+                            const Ray *pRay, TraceThreadData *pThread) const override;
     inline DBL Blob(const DBL v, const DBL s) const;
     inline void CalcAllDiffsSqrd(DBL *aryd, const DBL axisVal, const DBL spacing) const;
 };
@@ -759,7 +763,7 @@ struct SoftObjectPattern : public ContinuousPattern
 ///
 /// @todo   The additional member variables should be encapsulated, and computed by the class rather than the parser.
 ///
-struct SlopePattern : public ContinuousPattern
+struct SlopePattern final : public ContinuousPattern
 {
     Vector3d    altitudeDirection;
     Vector3d    slopeDirection;
@@ -774,24 +778,24 @@ struct SlopePattern : public ContinuousPattern
     bool        pointAt         : 1;
 
     SlopePattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `spherical` pattern.
-struct SphericalPattern : public ContinuousPattern
+struct SphericalPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `square` pattern.
-struct SquarePattern : public DiscretePattern
+struct SquarePattern final : public DiscretePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
 };
 
 /// Implements the `tiling` pattern.
@@ -799,39 +803,39 @@ struct SquarePattern : public DiscretePattern
 /// @todo   We should probably implement this as one class per tiling type, possibly all declared in @ref pattern.cpp
 ///         and instantiated via a static factory method in this class.
 ///
-struct TilingPattern : public ContinuousPattern
+struct TilingPattern final : public ContinuousPattern
 {
     unsigned char tilingType;
 
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `triangular` pattern.
-struct TriangularPattern : public DiscretePattern
+struct TriangularPattern final : public DiscretePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
 };
 
 /// Implements the `waves` pattern.
-struct WavesPattern : public ContinuousPattern
+struct WavesPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `wood` pattern.
-struct WoodPattern : public ContinuousPattern
+struct WoodPattern final : public ContinuousPattern
 {
     WoodPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual bool Precompute();
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
-    virtual bool HasSpecialTurbulenceHandling() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual bool Precompute() override;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
+    virtual bool HasSpecialTurbulenceHandling() const override;
 
 protected:
 
@@ -839,10 +843,10 @@ protected:
 };
 
 /// Implements the `wrinkles` pattern.
-struct WrinklesPattern : public ContinuousPattern
+struct WrinklesPattern final : public ContinuousPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 
@@ -868,8 +872,8 @@ struct FractalPattern : public ContinuousPattern
     unsigned char interiorType;
 
     FractalPattern();
-    virtual PatternPtr Clone() const = 0;
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const = 0;
+    virtual PatternPtr Clone() const override = 0;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override = 0;
 
 protected:
 
@@ -886,7 +890,7 @@ protected:
     ///
     /// @param  a           Final iteration "a" value.
     /// @param  b           Final iteration "b" value.
-    /// @param  mindist2    Square of the smallest distance to the origin thoughout all iterations.
+    /// @param  mindist2    Square of the smallest distance to the origin throughout all iterations.
     /// @return             The interior shade.
     ///
     DBL InteriorColour(DBL a, DBL b, DBL mindist2) const;
@@ -906,38 +910,38 @@ struct JuliaPattern : public FractalPattern
 
     JuliaPattern();
     JuliaPattern(const JuliaPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Provides an implementation of the `julia` pattern optimized for `exponent 3`.
-struct Julia3Pattern : public JuliaPattern
+struct Julia3Pattern final : public JuliaPattern
 {
     Julia3Pattern();
     Julia3Pattern(const JuliaPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Provides an implementation of the `julia` pattern optimized for `exponent 4`.
-struct Julia4Pattern : public JuliaPattern
+struct Julia4Pattern final : public JuliaPattern
 {
     Julia4Pattern();
     Julia4Pattern(const JuliaPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Provides a generic implementation of the `julia` pattern for arbitrary exponents.
-struct JuliaXPattern : public JuliaPattern
+struct JuliaXPattern final : public JuliaPattern
 {
     int fractalExponent;
 
     JuliaXPattern();
     JuliaXPattern(const JuliaPattern& obj);
     JuliaXPattern(const JuliaXPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 //------------------------------------------------------------------------------
@@ -949,74 +953,74 @@ struct MandelPattern : public FractalPattern
 };
 
 /// Provides an implementation of the `mandel` pattern optimized for `exponent 2` (default).
-struct Mandel2Pattern : public MandelPattern
+struct Mandel2Pattern final : public MandelPattern
 {
     Mandel2Pattern();
     Mandel2Pattern(const MandelPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
 };
 
 /// Provides an implementation of the `mandel` pattern optimized for `exponent 3`.
-struct Mandel3Pattern : public MandelPattern
+struct Mandel3Pattern final : public MandelPattern
 {
     Mandel3Pattern();
     Mandel3Pattern(const MandelPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Provides an implementation of the `mandel` pattern optimized for `exponent 4`.
-struct Mandel4Pattern : public MandelPattern
+struct Mandel4Pattern final : public MandelPattern
 {
     Mandel4Pattern();
     Mandel4Pattern(const MandelPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Provides a generic implementation of the `mandel` pattern for arbitrary exponents.
-struct MandelXPattern : public MandelPattern
+struct MandelXPattern final : public MandelPattern
 {
     int fractalExponent;
 
     MandelXPattern();
     MandelXPattern(const MandelPattern& obj);
     MandelXPattern(const MandelXPattern& obj);
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 //------------------------------------------------------------------------------
 // Magnet Patterns
 
 /// Implements the `magnet 1 mandel` pattern.
-struct Magnet1MPattern : public MandelPattern
+struct Magnet1MPattern final : public MandelPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `magnet 1 julia` pattern.
-struct Magnet1JPattern : public JuliaPattern
+struct Magnet1JPattern final : public JuliaPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `magnet 2 mandel` pattern.
-struct Magnet2MPattern : public MandelPattern
+struct Magnet2MPattern final : public MandelPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `magnet 2 julia` pattern.
-struct Magnet2JPattern : public JuliaPattern
+struct Magnet2JPattern final : public JuliaPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 
@@ -1024,22 +1028,22 @@ struct Magnet2JPattern : public JuliaPattern
 // Noise-Based Patterns
 
 /// Implements the `bozo` pattern.
-struct BozoPattern : public NoisePattern
+struct BozoPattern final : public NoisePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual ColourBlendMapConstPtr GetDefaultBlendMap() const override;
 };
 
 /// Implements the `bumps` pattern.
-struct BumpsPattern : public NoisePattern
+struct BumpsPattern final : public NoisePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
 };
 
 /// Implements the `spotted` pattern.
-struct SpottedPattern : public NoisePattern
+struct SpottedPattern final : public NoisePattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
 };
 
 
@@ -1052,9 +1056,9 @@ struct SpiralPattern : public ContinuousPattern
     short arms;
 
     SpiralPattern();
-    virtual PatternPtr Clone() const = 0;
-    virtual bool Precompute();
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const = 0;
+    virtual PatternPtr Clone() const override = 0;
+    virtual bool Precompute() override;
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override = 0;
 
 protected:
 
@@ -1062,17 +1066,17 @@ protected:
 };
 
 /// Implements the `spiral1` pattern.
-struct Spiral1Pattern : public SpiralPattern
+struct Spiral1Pattern final : public SpiralPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 /// Implements the `spiral2` pattern.
-struct Spiral2Pattern : public SpiralPattern
+struct Spiral2Pattern final : public SpiralPattern
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual DBL EvaluateRaw(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
 };
 
 
@@ -1100,10 +1104,10 @@ struct ColourPattern : public BasicPattern
     ///                             crackle pattern, store cached data here.
     /// @return                     The pattern's value at the given point in space.
     ///
-    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
+    virtual DBL Evaluate(const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override final;
 
-    virtual unsigned int NumDiscreteBlendMapEntries() const;
-    virtual bool CanMap() const;
+    virtual unsigned int NumDiscreteBlendMapEntries() const override;
+    virtual bool CanMap() const override;
 
     /// Evaluates the pattern at a given point in space.
     ///
@@ -1128,96 +1132,25 @@ struct ColourPattern : public BasicPattern
 ///
 /// @todo   The additional member variables should possibly be encapsulated.
 ///
-struct ColourFunctionPattern : public ColourPattern
+struct ColourFunctionPattern final : public ColourPattern
 {
     GenericScalarFunctionPtr pFn[5];
 
     ColourFunctionPattern();
     ColourFunctionPattern(const ColourFunctionPattern& obj);
-    virtual ~ColourFunctionPattern();
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual bool Evaluate(TransColour& result, const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual bool HasTransparency() const;
+    virtual ~ColourFunctionPattern() override;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual bool Evaluate(TransColour& result, const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual bool HasTransparency() const override;
 };
 
 /// Implements the `image_map` pattern.
-struct ColourImagePattern : public ColourPattern, public ImagePatternImpl
+struct ColourImagePattern final : public ColourPattern, public ImagePatternImpl
 {
-    virtual PatternPtr Clone() const { return BasicPattern::Clone(*this); }
-    virtual bool Evaluate(TransColour& result, const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const;
-    virtual bool HasTransparency() const;
+    virtual PatternPtr Clone() const override { return BasicPattern::Clone(*this); }
+    virtual bool Evaluate(TransColour& result, const Vector3d& EPoint, const Intersection *pIsection, const Ray *pRay, TraceThreadData *pThread) const override;
+    virtual bool HasTransparency() const override;
 };
-
-
-//******************************************************************************
-// Crackle Pattern Support Types
-
-/// Helper class to implement the crackle cache.
-class CrackleCellCoord
-{
-public:
-
-    CrackleCellCoord() : mX(0), mY(0), mZ(0), mRepeatX(0), mRepeatY(0), mRepeatZ(0) {}
-    CrackleCellCoord(int x, int y, int z, int rx, int ry, int rz) : mX(x), mY(y), mZ(z), mRepeatX(rx), mRepeatY(ry), mRepeatZ(rz)
-    {
-        WrapCellCoordinate(mX, mRepeatX);
-        WrapCellCoordinate(mY, mRepeatY);
-        WrapCellCoordinate(mZ, mRepeatZ);
-    }
-
-    bool operator==(CrackleCellCoord const& other) const
-    {
-        return mX == other.mX && mY == other.mY && mZ == other.mZ;
-    }
-
-    /// Function to compute a hash value from the coordinates.
-    ///
-    /// @note       This function's name, as well as it being a global function rather than a member, is mandated by
-    ///             boost::unordered_map.
-    ///
-    /// @param[in]  coord   The coordinate.
-    /// @return             The hash.
-    ///
-    friend std::size_t hash_value(CrackleCellCoord const& coord)
-    {
-        std::size_t seed = 0;
-        boost::hash_combine(seed, coord.mX);
-        boost::hash_combine(seed, coord.mY);
-        boost::hash_combine(seed, coord.mZ);
-
-        return seed;
-    }
-
-protected:
-
-    int mX;
-    int mY;
-    int mZ;
-    int mRepeatX;
-    int mRepeatY;
-    int mRepeatZ;
-
-    static inline void WrapCellCoordinate(int& v, int& repeat)
-    {
-        if (!repeat)
-            return;
-        v = wrapInt(v, repeat);
-        if ((v >= 2) && (v < repeat - 2))
-            repeat = 0;
-    }
-};
-
-/// Helper class to implement the crackle cache.
-struct CrackleCacheEntry
-{
-    /// A kind of timestamp specifying when this particular entry was last used.
-    size_t lastUsed;
-
-    /// The pseudo-random points defining the pattern in this particular subset of 3D space.
-    Vector3d aCellNuclei[81];
-};
-
-typedef boost::unordered_map<CrackleCellCoord, CrackleCacheEntry, boost::hash<CrackleCellCoord> > CrackleCache;
 
 
 //******************************************************************************
@@ -1246,5 +1179,6 @@ void InitializePatternGenerators(void);
 //##############################################################################
 
 }
+// end of namespace pov
 
 #endif // POVRAY_CORE_PATTERN_H
