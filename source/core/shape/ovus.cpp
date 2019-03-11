@@ -69,10 +69,19 @@
 // Unit header file must be the first file included within POV-Ray *.cpp files (pulls in config)
 #include "core/shape/ovus.h"
 
+// C++ variants of C standard header files
+// C++ standard header files
+//  (none at the moment)
+
+// POV-Ray header files (base module)
+//  (none at the moment)
+
+// POV-Ray header files (core module)
 #include "core/math/matrix.h"
 #include "core/math/polynomialsolver.h"
 #include "core/render/ray.h"
 #include "core/scene/tracethreaddata.h"
+#include "core/support/statistics.h"
 
 // this must be the last file included
 #include "base/povdebug.h"
@@ -83,7 +92,7 @@ namespace pov
 void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
                                   DBL * Depth1, DBL * Depth2, DBL * Depth3,
                                   DBL * Depth4, DBL * Depth5, DBL * Depth6,
-                                  TraceThreadData *Thread) const
+                                  RenderStatistics& stats) const
 {
     DBL OCSquared, t_Closest_Approach, Half_Chord, t_Half_Chord_Squared;
     Vector3d Padj;
@@ -204,7 +213,7 @@ void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
         // and dismiss the 'apple'
         // If you find a solution to resolve the rotation of
         //   (x + r)^2 + y^2 = R^2 around y (so replacing x by sqrt(x^2+z^2))
-        // with something which is faster than a 4th degree polynome,
+        // with something which is faster than a 4th degree polynomial,
         // please feel welcome to update and share...
 
         if ((r[n] <= gkMinIsectDepthReturned) || (r[n] >= MAX_DISTANCE))
@@ -282,7 +291,7 @@ bool Ovus::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDat
     D /= len;
 
     Intersect_Ovus_Spheres(P, D, &Depth1, &Depth2, &Depth3,
-                           &Depth4, &Depth5, &Depth6, Thread);
+                           &Depth4, &Depth5, &Depth6, Thread->Stats());
 
     if (Depth1 > gkMinIsectDepthReturned)
     {
@@ -879,7 +888,7 @@ void Ovus::Compute_BBox()
 *
 ******************************************************************************/
 
-void Ovus::UVCoord(Vector2d& Result, const Intersection *Inter, TraceThreadData *Thread) const
+void Ovus::UVCoord(Vector2d& Result, const Intersection *Inter) const
 {
     CalcUV(Inter->IPoint, Result);
 }
@@ -995,3 +1004,4 @@ void Ovus::CalcUV(const Vector3d& IPoint, Vector2d& Result) const
 }
 
 }
+// end of namespace pov

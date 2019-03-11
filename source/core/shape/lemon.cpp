@@ -38,12 +38,19 @@
 // Unit header file must be the first file included within POV-Ray *.cpp files (pulls in config)
 #include "core/shape/lemon.h"
 
+// C++ variants of C standard header files
+// C++ standard header files
+//  (none at the moment)
+
+// POV-Ray header files (base module)
 #include "base/messenger.h"
 
+// POV-Ray header files (core module)
 #include "core/math/matrix.h"
 #include "core/math/polynomialsolver.h"
 #include "core/render/ray.h"
 #include "core/scene/tracethreaddata.h"
+#include "core/support/statistics.h"
 
 // this must be the last file included
 #include "base/povdebug.h"
@@ -105,7 +112,7 @@ bool Lemon::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 
     Intersection_Found = false;
 
-    if ((cnt = Intersect(P, D, I, Thread)) != 0)
+    if ((cnt = Intersect(P, D, I, Thread->Stats())) != 0)
     {
         for (i = 0; i < cnt; i++)
         {
@@ -152,7 +159,7 @@ bool Lemon::All_Intersections(const Ray& ray, IStack& Depth_Stack, TraceThreadDa
 *
 ******************************************************************************/
 
-int Lemon::Intersect(const Vector3d& P, const Vector3d& D, LEMON_INT *Intersection, TraceThreadData *Thread) const
+int Lemon::Intersect(const Vector3d& P, const Vector3d& D, LEMON_INT *Intersection, RenderStatistics& stats) const
 {
     int i = 0;
     DBL a, b, c[5], r[4];
@@ -788,7 +795,7 @@ void Lemon::Compute_BBox()
 *
 ******************************************************************************/
 
-void Lemon::UVCoord(Vector2d& Result, const Intersection *Inter, TraceThreadData *Thread) const
+void Lemon::UVCoord(Vector2d& Result, const Intersection *Inter) const
 {
     CalcUV(Inter->IPoint, Result);
 }
@@ -892,3 +899,4 @@ void Lemon::CalcUV(const Vector3d& IPoint, Vector2d& Result) const
 #endif // POV_ENABLE_LEMON_UV
 
 }
+// end of namespace pov

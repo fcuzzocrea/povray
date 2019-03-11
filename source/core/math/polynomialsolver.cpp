@@ -38,6 +38,14 @@
 // Unit header file must be the first file included within POV-Ray *.cpp files (pulls in config)
 #include "core/math/polynomialsolver.h"
 
+// C++ variants of C standard header files
+// C++ standard header files
+//  (none at the moment)
+
+// POV-Ray header files (base module)
+//  (none at the moment)
+
+// POV-Ray header files (core module)
 #include "core/support/statistics.h"
 
 // this must be the last file included
@@ -171,7 +179,7 @@ const DBL kSolveQuadratic_SmallEnough = 1.0e-10;
 * Local typedefs
 ******************************************************************************/
 
-struct polynomial
+struct polynomial final
 {
     int ord;
     PRECISE_FLOAT coef[MAX_ORDER+1];
@@ -1714,7 +1722,7 @@ int polysolve (int order, const DBL *Coeffs, DBL *roots, DBL HandleCollapsedRoot
         atmin = numchanges(np, sseq, (PRECISE_FLOAT)0.0);
         if (MaxBound > 0.0)
         {
-            max_value = max(1.0,MaxBound);
+            max_value = std::fmax(1.0,MaxBound);
             atmax = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
         }
         else
@@ -1750,7 +1758,7 @@ int polysolve (int order, const DBL *Coeffs, DBL *roots, DBL HandleCollapsedRoot
     if (MaxBound > 0.0)
     {
         min_value = 0.0;
-        max_value = max(1.0,MaxBound); // Prevent passed value being too small.
+        max_value = std::fmax(1.0,MaxBound); // Prevent passed value being too small.
 
         atmin = numchanges(np, sseq, (PRECISE_FLOAT)min_value);
         atmax = numchanges(np, sseq, (PRECISE_FLOAT)max_value);
@@ -1773,10 +1781,10 @@ int polysolve (int order, const DBL *Coeffs, DBL *roots, DBL HandleCollapsedRoot
         max_value   = fabs(Coeffs[2]);
         for (i = 3; i <= order; i++)
         {
-            max_value = max(fabs(Coeffs[i]),max_value);
+            max_value = std::fmax(fabs(Coeffs[i]),max_value);
         }
         max_value /= Abs_Coeff_n + EPSILON;
-        max_value = min(max(max_value,max_value2),MAX_DISTANCE);
+        max_value = std::fmin(std::fmax(max_value,max_value2),MAX_DISTANCE);
 
         // NOTE: Found in practice roots occasionally, slightly outside upper bound...
         // Perhaps related to how the sturm chain is pruned in modp(). Until sorted adding
@@ -1859,3 +1867,4 @@ int polysolve (int order, const DBL *Coeffs, DBL *roots, DBL HandleCollapsedRoot
 }
 
 }
+// end of namespace pov
