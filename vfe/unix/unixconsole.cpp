@@ -262,7 +262,7 @@ static void PrintStatusChanged (vfeSession *session, State force = kUnknown)
             break;
         case kRendering:
 #ifndef X_DISPLAY_MISSING
-            if ((gDisplay != nullptr) && 
+            if ((gDisplay != nullptr) &&
                 (
                  (gDisplayMode == DISP_MODE_X11)
                 || (gDisplayMode == DISP_MODE_SDL)
@@ -281,7 +281,7 @@ static void PrintStatusChanged (vfeSession *session, State force = kUnknown)
             break;
         case kPausedRendering:
 #ifndef X_DISPLAY_MISSING
-            if ((gDisplay != nullptr) && 
+            if ((gDisplay != nullptr) &&
                 (
                  (gDisplayMode == DISP_MODE_X11)
                 || (gDisplayMode == DISP_MODE_SDL)
@@ -561,7 +561,7 @@ int main (int argc, char **argv)
       /* tricky part, -1 is choose the top available (oh, the personal taste...)
        * for more direct choice, degrade to DISP_MODE_NODE when not available
        */
-      string choice = session->GetUnixOptions()->QueryOptionString("display","window");
+      std::string choice = session->GetUnixOptions()->QueryOptionString("display","window");
 #ifndef X_DISPLAY_MISSING
       if (choice == "x11")
       {
@@ -576,8 +576,8 @@ int main (int argc, char **argv)
           gDisplayMode = DISP_MODE_SDL;
 #else
           gDisplayMode = DISP_MODE_TEXT;
-#endif 
-#endif 
+#endif
+#endif
       }
       else
 #endif
@@ -597,9 +597,9 @@ int main (int argc, char **argv)
           gDisplayMode = DISP_MODE_X11;
 #else
           gDisplayMode = DISP_MODE_TEXT;
-#endif 
-#endif 
-#endif 
+#endif
+#endif
+#endif
       }
     }
     if (session->GetUnixOptions()->isOptionSet("general", "help"))

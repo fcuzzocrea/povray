@@ -11,7 +11,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -43,6 +43,7 @@
 #include "disp_x11.h"
 
 #include <algorithm>
+#include <memory>
 
 // handle I/O errors via setjmp / longjmp
 #include <setjmp.h>
@@ -60,7 +61,7 @@
 #include "syspovdebug.h"
 
 static ::Display * theDisplay;// to be messed by the error handling routine
-static boost::mutex        x11Mutex;
+static std::mutex    x11Mutex;
 
 static int xioErrorHandler( ::Display * disp )
 {
@@ -89,12 +90,12 @@ namespace pov_frontend
     static char theICONNAME[] =  "POV-Ray";     /* short name for the icon */
 
 
-    extern shared_ptr<Display> gDisplay;
+    extern std::shared_ptr<Display> gDisplay;
     const UnixOptionsProcessor::Option_Info UnixX11Display::Options[] =
     {
         // command line/povray.conf/environment options of this display mode can be added here
         // section name, option name, default, has_param, command line parameter, environment variable name, help text
-        // 
+        //
         // TODO option to get a window-id to use instead of default desktop
         UnixOptionsProcessor::Option_Info("", "", "", false, "", "", "") // has to be last
     };
@@ -166,7 +167,7 @@ namespace pov_frontend
             // allocate a new pixel counters, dropping influence of previous picture
             m_PxCount.clear(); // not useful, vector was created empty, just to be sure
             m_PxCount.reserve(width*height); // we need that, and the loop!
-            for(vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
+            for(std::vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
                 (*iter) = 0;
         }
         if (theImage->data)
@@ -238,7 +239,7 @@ namespace pov_frontend
                 % (paused ? " [paused]" : "");
 
         {
-            boost::mutex::scoped_lock lock(x11Mutex);
+            std::lock_guard<std::mutex> lock(x11Mutex);
             XStoreName(theDisplay, theWindow, f.str().c_str());
         }
     }
@@ -268,9 +269,9 @@ namespace pov_frontend
             // determine desktop area
             // always scale when window is too big to fit
             // tolerance for border, just hope the Window Manager is not larger than 10
-            width = min(theDispWidth - 10, width);
+            width = std::min(theDispWidth - 10, width);
             // tolerance for border and title bar, just hope the Window Manager is not larger than 80
-            height = min(theDispHeight - 80, height);
+            height = std::min(theDispHeight - 80, height);
             // calculate display area
             float AspectRatio = float(width)/float(height);
             float AspectRatio_Full = float(GetWidth())/float(GetHeight());
@@ -415,8 +416,8 @@ namespace pov_frontend
 
             XSelectInput(theDisplay, theWindow,
                 (
-                 ButtonPressMask | 
-                 KeyPressMask | 
+                 ButtonPressMask |
+                 KeyPressMask |
                  StructureNotifyMask));
 
             /*
@@ -476,7 +477,7 @@ namespace pov_frontend
 
             m_PxCount.clear();
             m_PxCount.reserve(width*height);
-            for(vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
+            for(std::vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
                 (*iter) = 0;
 
             m_valid = true;
@@ -503,16 +504,14 @@ namespace pov_frontend
                  * ... and so on
                  * TODO: change for integer and use / instead of * in formula ?
                  */
-                m_display_scale = min(float(width) / GetWidth(), float(height) / GetHeight());
+                m_display_scale = std::min(float(width) / GetWidth(), float(height) / GetHeight());
             }
-
-
             SetCaption(false);
         }
         else
         {
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, 0, 0, 0, 0, theImage->width, theImage->height);
             }
             XFlush(theDisplay);
@@ -563,7 +562,7 @@ namespace pov_frontend
         {
             SetPixelScaled(x, y, colour);
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, x*m_display_scale, y*m_display_scale, x*m_display_scale, y*m_display_scale, 1, 1 );
             }
         }
@@ -571,7 +570,7 @@ namespace pov_frontend
         {
             SetPixel(x, y, colour);
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, x, y, x, y, 1, 1 );
             }
         }
@@ -583,10 +582,10 @@ namespace pov_frontend
         if (!m_valid)
             return;
 
-        int ix1 = min(x1, GetWidth()-1);
-        int ix2 = min(x2, GetWidth()-1);
-        int iy1 = min(y1, GetHeight()-1);
-        int iy2 = min(y2, GetHeight()-1);
+        int ix1 = std::min(x1, GetWidth()-1);
+        int ix2 = std::min(x2, GetWidth()-1);
+        int iy1 = std::min(y1, GetHeight()-1);
+        int iy2 = std::min(y2, GetHeight()-1);
 
         if (m_display_scaled)
         {
@@ -602,7 +601,7 @@ namespace pov_frontend
                 SetPixelScaled(ix2, y, colour);
             }
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, ix1*m_display_scale, iy1*m_display_scale, ix1*m_display_scale, iy1*m_display_scale, (uint_least64_t(ix2*m_display_scale)-uint_least64_t(ix1*m_display_scale)+1), (uint_least64_t(iy2*m_display_scale)-uint_least64_t(iy1*m_display_scale)+1));
             }
         }
@@ -620,7 +619,7 @@ namespace pov_frontend
                 SetPixel(ix2, y, colour);
             }
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, ix1, iy1, ix1, iy1, (ix2-ix1+1), (iy2-iy1+1));
             }
         }
@@ -631,10 +630,10 @@ namespace pov_frontend
         if (!m_valid)
             return;
 
-        int ix1 = min(x1, GetWidth()-1);
-        int ix2 = min(x2, GetWidth()-1);
-        int iy1 = min(y1, GetHeight()-1);
-        int iy2 = min(y2, GetHeight()-1);
+        int ix1 = std::min(x1, GetWidth()-1);
+        int ix2 = std::min(x2, GetWidth()-1);
+        int iy1 = std::min(y1, GetHeight()-1);
+        int iy2 = std::min(y2, GetHeight()-1);
 
         if (m_display_scaled)
         {
@@ -646,7 +645,7 @@ namespace pov_frontend
                 }
             }
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, ix1*m_display_scale, iy1*m_display_scale, ix1*m_display_scale, iy1*m_display_scale, (uint_least64_t(ix2*m_display_scale)-uint_least64_t(ix1*m_display_scale)+1), (uint_least64_t(iy2*m_display_scale)-uint_least64_t(iy1*m_display_scale)+1));
             }
         }
@@ -661,7 +660,7 @@ namespace pov_frontend
             }
 
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, ix1, iy1, ix1, iy1, (ix2-ix1+1), (iy2-iy1+1));
             }
         }
@@ -673,10 +672,10 @@ namespace pov_frontend
         if (!m_valid)
             return;
 
-        unsigned int ix1 = min(x1, GetWidth()-1);
-        unsigned int ix2 = min(x2, GetWidth()-1);
-        unsigned int iy1 = min(y1, GetHeight()-1);
-        unsigned int iy2 = min(y2, GetHeight()-1);
+        unsigned int ix1 = std::min(x1, GetWidth()-1);
+        unsigned int ix2 = std::min(x2, GetWidth()-1);
+        unsigned int iy1 = std::min(y1, GetHeight()-1);
+        unsigned int iy2 = std::min(y2, GetHeight()-1);
 
         if (m_display_scaled)
         {
@@ -684,7 +683,7 @@ namespace pov_frontend
                 for(unsigned int x = ix1; x <= ix2; x++, i++)
                     SetPixelScaled(x, y, colour[i]);
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, ix1*m_display_scale, iy1*m_display_scale, ix1*m_display_scale, iy1*m_display_scale, (uint_least64_t(ix2*m_display_scale)-uint_least64_t(ix1*m_display_scale)+1), (uint_least64_t(iy2*m_display_scale)-uint_least64_t(iy1*m_display_scale)+1));
             }
         }
@@ -694,7 +693,7 @@ namespace pov_frontend
                 for(unsigned int x = ix1; x <= ix2; x++, i++)
                     SetPixel(x, y, colour[i]);
             {
-                boost::mutex::scoped_lock lock(x11Mutex);
+                std::lock_guard<std::mutex> lock(x11Mutex);
                 XPutImage( theDisplay, theWindow, theGC, theImage, ix1, iy1, ix1, iy1, (ix2-ix1+1), (iy2-iy1+1));
             }
         }
@@ -708,7 +707,7 @@ namespace pov_frontend
 
         if (Force )
         {
-            boost::mutex::scoped_lock lock(x11Mutex);
+            std::lock_guard<std::mutex> lock(x11Mutex);
             XFlush(theDisplay);
         }
     }
@@ -790,8 +789,8 @@ namespace pov_frontend
         bool do_quit = false;
 
         // consum all requested events, including button press, even for doing nothing
-        while (XCheckMaskEvent(theDisplay, 
-              ButtonPressMask| 
+        while (XCheckMaskEvent(theDisplay,
+              ButtonPressMask|
               KeyPressMask|StructureNotifyMask, &event))
         {
             switch (event.type)

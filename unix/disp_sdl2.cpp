@@ -12,7 +12,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2018 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -45,6 +45,9 @@
 #include <SDL2/SDL.h>
 
 #include <algorithm>
+#include <memory>
+
+#include <boost/format.hpp>
 
 // this must be the last file included
 #include "syspovdebug.h"
@@ -55,13 +58,13 @@ namespace pov_frontend
     using namespace vfe;
     using namespace vfePlatform;
 
-    extern shared_ptr<Display> gDisplay;
+    extern std::shared_ptr<Display> gDisplay;
 
     const UnixOptionsProcessor::Option_Info UnixSDL2Display::Options[] =
     {
         // command line/povray.conf/environment options of this display mode can be added here
         // section name, option name, default, has_param, command line parameter, environment variable name, help text
-        // 
+        //
         // TODO option to get a window-id to use instead of default desktop
         UnixOptionsProcessor::Option_Info("", "", "", false, "", "", "") // has to be last
     };
@@ -121,8 +124,8 @@ namespace pov_frontend
         m_valid = p->m_valid;
         m_display_scaled = p->m_display_scaled;
         m_display_scale = p->m_display_scale;
-		m_window = p->m_window;
-		m_screen = p->m_screen;
+                m_window = p->m_window;
+                m_screen = p->m_screen;
     // protect against Close(), as the resources are transfered and not copied
     p->m_display_scaled=false;
     p->m_display_scale=1;
@@ -136,7 +139,7 @@ namespace pov_frontend
             // allocate a new pixel counters, dropping influence of previous picture
             m_PxCount.clear(); // not useful, vector was created empty, just to be sure
             m_PxCount.reserve(width*height); // we need that, and the loop!
-            for(vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
+            for(std::vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
                 (*iter) = 0;
         }
         if (m_screen->pixels)
@@ -202,7 +205,7 @@ namespace pov_frontend
         else
             f = boost::format(PACKAGE_NAME " " VERSION_BASE " SDL2 %s")
                 % (paused ? " [paused]" : "");
-		SDL_SetWindowTitle(m_window, f.str().c_str());
+                SDL_SetWindowTitle(m_window, f.str().c_str());
     }
 
     void UnixSDL2Display::Show()
@@ -226,19 +229,19 @@ namespace pov_frontend
         // determine desktop area
         // always scale when window is too big to fit
         {
-          SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");			   // make the scaled rendering look smoother.
+          SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");                    // make the scaled rendering look smoother.
 
           SDL_DisplayMode mode;
-          static int display_in_use = 0;										// only using first display
+          static int display_in_use = 0;                                                                                // only using first display
           if (SDL_GetDesktopDisplayMode(display_in_use, &mode) < 0) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't get desktop display mode: %s", SDL_GetError());
             return;
           }
 
           // tolerance for border, just hope the Window Manager is not larger than 10
-          width = min(mode.w - 10, width);
+          width = std::min(mode.w - 10, width);
           // tolerance for border and title bar, just hope the Window Manager is not larger than 80
-          height = min(mode.h - 80, height);
+          height = std::min(mode.h - 80, height);
         }
         // calculate display area
         float AspectRatio = float(width)/float(height);
@@ -265,7 +268,7 @@ namespace pov_frontend
 
         m_PxCount.clear();
         m_PxCount.reserve(width*height);
-        for(vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
+        for(std::vector<unsigned char>::iterator iter = m_PxCount.begin(); iter != m_PxCount.end(); iter++)
           (*iter) = 0;
 
         m_valid = true;
@@ -312,7 +315,7 @@ namespace pov_frontend
            * ... and so on
            * TODO: change for integer and use / instead of * in formula ?
            */
-          m_display_scale = min(float(width) / GetWidth(), float(height) / GetHeight());
+          m_display_scale = std::min(float(width) / GetWidth(), float(height) / GetHeight());
         }
 
 
@@ -443,10 +446,10 @@ namespace pov_frontend
         if (!m_valid)
             return;
 
-        int ix1 = min(x1, GetWidth()-1);
-        int ix2 = min(x2, GetWidth()-1);
-        int iy1 = min(y1, GetHeight()-1);
-        int iy2 = min(y2, GetHeight()-1);
+        int ix1 = std::min(x1, GetWidth()-1);
+        int ix2 = std::min(x2, GetWidth()-1);
+        int iy1 = std::min(y1, GetHeight()-1);
+        int iy2 = std::min(y2, GetHeight()-1);
 
         if (SDL_MUSTLOCK(m_screen) && SDL_LockSurface(m_screen) < 0)
             return;
@@ -497,10 +500,10 @@ namespace pov_frontend
         if (!m_valid)
             return;
 
-        unsigned int ix1 = min(x1, GetWidth()-1);
-        unsigned int ix2 = min(x2, GetWidth()-1);
-        unsigned int iy1 = min(y1, GetHeight()-1);
-        unsigned int iy2 = min(y2, GetHeight()-1);
+        unsigned int ix1 = std::min(x1, GetWidth()-1);
+        unsigned int ix2 = std::min(x2, GetWidth()-1);
+        unsigned int iy1 = std::min(y1, GetHeight()-1);
+        unsigned int iy2 = std::min(y2, GetHeight()-1);
 
         if (m_display_scaled)
         {
@@ -526,10 +529,10 @@ namespace pov_frontend
         if (!m_valid)
             return;
 
-        unsigned int ix1 = min(x1, GetWidth()-1);
-        unsigned int ix2 = min(x2, GetWidth()-1);
-        unsigned int iy1 = min(y1, GetHeight()-1);
-        unsigned int iy2 = min(y2, GetHeight()-1);
+        unsigned int ix1 = std::min(x1, GetWidth()-1);
+        unsigned int ix2 = std::min(x2, GetWidth()-1);
+        unsigned int iy1 = std::min(y1, GetHeight()-1);
+        unsigned int iy2 = std::min(y2, GetHeight()-1);
 
         if (SDL_MUSTLOCK(m_screen) && SDL_LockSurface(m_screen) < 0)
             return;
@@ -549,7 +552,7 @@ namespace pov_frontend
 
         if (SDL_MUSTLOCK(m_screen))
             SDL_UnlockSurface(m_screen);
-        
+
         SDL_Rect rect;
         rect.x = ix1 * m_display_scale;
         rect.y = iy1 * m_display_scale;
