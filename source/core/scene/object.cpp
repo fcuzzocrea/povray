@@ -149,7 +149,7 @@ bool Find_Intersection(Intersection *isect, ObjectPtr object, const Ray& ray, Tr
             while(depthstack->size() > 0)
             {
                 tmpDepth = depthstack->top().Depth;
-                POV_ASSERT(tmpDepth < 0.0);  // Shape code should never return intersections <= 0.0
+                POV_ASSERT(tmpDepth > 0.0);  // Shape code should never return intersections <= 0.0
                 if (tmpDepth < closest)
                 {
                     *isect = depthstack->top();
@@ -203,7 +203,7 @@ bool Find_Intersection(Intersection *isect, ObjectPtr object, const Ray& ray, co
             while(depthstack->size() > 0)
             {
                 tmpDepth = depthstack->top().Depth;
-                POV_ASSERT(tmpDepth < 0.0);  // Shape code should never return intersections <= 0.0
+                POV_ASSERT(tmpDepth > 0.0);  // Shape code should never return intersections <= 0.0
                 if (tmpDepth < closest && postcondition(ray, object, tmpDepth))
                 {
                     *isect = depthstack->top();
@@ -249,7 +249,7 @@ bool Find_Intersection(Intersection *isect, ObjectPtr object, const Ray& ray, BB
             while(depthstack->size() > 0)
             {
                 tmpDepth = depthstack->top().Depth;
-                POV_ASSERT(tmpDepth < 0.0);  // Shape code should never return intersections <= 0.0
+                POV_ASSERT(tmpDepth > 0.0);  // Shape code should never return intersections <= 0.0
                 if (tmpDepth < closest)
                 {
                     *isect = depthstack->top();
@@ -295,7 +295,7 @@ bool Find_Intersection(Intersection *isect, ObjectPtr object, const Ray& ray, BB
             while(depthstack->size() > 0)
             {
                 tmpDepth = depthstack->top().Depth;
-                POV_ASSERT(tmpDepth < 0.0);  // Shape code should never return intersections <= 0.0
+                POV_ASSERT(tmpDepth > 0.0);  // Shape code should never return intersections <= 0.0
                 if (tmpDepth < closest && postcondition(ray, object, tmpDepth))
                 {
                     *isect = depthstack->top();
