@@ -67,10 +67,6 @@ namespace pov
 // as it is used only with low power, precision can be high
 const DBL Lemon_Tolerance = 1.0e-10;
 
-// Tolerance used while selecting from solver returned roots.
-// TODO FIXME - can we use EPSILON or a similar more generic constant instead?
-const DBL ROOT_TOLERANCE = 1.0e-4;
-
 
 /*****************************************************************************
 *
@@ -221,9 +217,9 @@ int Lemon::Intersect(const Vector3d& P, const Vector3d& D, LEMON_INT *Intersecti
             vertical = Ipoint[Z];
             if ((vertical >= 0.0) && (vertical <= 1.0))
             {
+                DBL effectiveIRadius = sqrt(Sqr(Ipoint[X]) + Sqr(Ipoint[Y]) + Sqr(Ipoint[Z]-VerticalPosition));
                 horizontal = sqrt(Sqr(Ipoint[X]) + Sqr(Ipoint[Y]));
-                OCSquared = Sqr((horizontal - HorizontalPosition)) + Sqr((vertical - VerticalPosition));
-                if (fabs(OCSquared - r2 ) < ROOT_TOLERANCE)
+                if (effectiveIRadius < inner_radius)
                 {
                     Intersection[i].d = r[n];
                     INormal = Ipoint;

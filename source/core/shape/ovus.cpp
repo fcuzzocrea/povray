@@ -226,9 +226,9 @@ void Ovus::Intersect_Ovus_Spheres(const Vector3d& P, const Vector3d& D,
         vertical = IPoint[Y];
         if ((vertical > BottomVertical) && (vertical < TopVertical))
         {
+            DBL effectiveIRadius = sqrt(Sqr(IPoint[X]) + Sqr(IPoint[Y]-VerticalPosition) + Sqr(IPoint[Z]));
             horizontal = sqrt(Sqr(IPoint[X]) + Sqr(IPoint[Z]));
-            OCSquared = Sqr((horizontal + HorizontalPosition)) + Sqr((vertical - VerticalPosition));
-            if (fabs(OCSquared - Sqr(ConnectingRadius)) < RootTolerance)
+            if (effectiveIRadius < ConnectingRadius)
             {
                 if (*Depth5 < 0)
                 {
