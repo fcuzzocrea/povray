@@ -254,29 +254,34 @@ int Torus::Intersect(const BasicRay& ray, DBL *Depth, RenderStatistics& stats) c
 
     r2 = Sqr(MajorRadius + MinorRadius);
 
-#ifdef TORUS_EXTRA_STATS
-    stats[Torus_Bound_Tests]++;
-#endif
+//#ifdef TORUS_EXTRA_STATS
+//    stats[Torus_Bound_Tests]++;
+//#endif
 
-    if (Test_Thick_Cylinder(P, D, y1, y2, r1, r2))
+    // @todo Look to completely remove Test_Thick_Cylinder unless compelling reason
+    // found to keep it. If keep it also look to turn off on -mb use.
+//  if (Test_Thick_Cylinder(P, D, y1, y2, r1, r2))
+    if ( true )
     {
-#ifdef TORUS_EXTRA_STATS
-        stats[Torus_Bound_Tests_Succeeded]++;
-#endif
+//#ifdef TORUS_EXTRA_STATS
+//        stats[Torus_Bound_Tests_Succeeded]++;
+//#endif
 
-        // @todo Look to remove the optimization below. It's true the rays origin
-        // being nearer eventual surface intersection normalizes the polynomial
-        // values returned on evaluation. However, after recent solver improvements
-        // values are less often used to determine intersections directly. Further,
-        // the optimization below was never a general one in that it handled only
+        // @todo Look for more general way to apply the ray origin distance normalization.
+        //
+        // The optimization below found to condition polynomials where P is
+        // far from the torus such that they are much easier to solver. Coefficients
+        // and evaluated values not necessarily normalized because the defined torus
+        // is not normalized during parsing and set up for user minor/major radii.
+        // The optimization below also not a general one in that it handles only
         // the P far away cases and not secondary rays where the torus itself might
-        // create "long" rays to itself. It also didn't handle cases where the distances
-        // might be dimensionally really small in the solver space. Probably the
-        // optimization isn't any longer needed, but if so, look to normalize using
-        // the coefficient values so to normalize the returned values more generally.
+        // create "long" rays to itself. Aside: The original choice of +MinorRadius
+        // to be sure origin outside also 'fortunate' in that it tends produces nice
+        // coefficients for usual major/minor radii.
+        //
         // Cost with improved versions of solvers:
         //    solve_quartic calls +1.30%
-        //    polysolve calls     +0.25%
+        //    polysolve calls     +0.25% (since found some faster cases - interations <)
 
         // Move P close to bounding sphere to have more precise root calculation.
         // Bounding sphere radius is R + r, we add r once more to ensure
@@ -969,7 +974,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
         u = P[X] + k * D[X];
         v = P[Z] + k * D[Z];
 
-        if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
+        if (k > gkDBL_epsilon)
         {
             r = u * u + v * v;
 
@@ -986,7 +991,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
         u = P[X] + k * D[X];
         v = P[Z] + k * D[Z];
 
-        if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
+        if (k > gkDBL_epsilon)
         {
             r = u * u + v * v;
 
@@ -1015,7 +1020,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b + d) / a;
 
-            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
+            if (k > gkDBL_epsilon)
             {
                 h = P[Y] + k * D[Y];
 
@@ -1027,7 +1032,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b - d) / a;
 
-            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
+            if (k > gkDBL_epsilon)
             {
                 h = P[Y] + k * D[Y];
 
@@ -1050,7 +1055,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b + d) / a;
 
-            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
+            if (k > gkDBL_epsilon)
             {
                 h = P[Y] + k * D[Y];
 
@@ -1062,7 +1067,7 @@ bool Torus::Test_Thick_Cylinder(const Vector3d& P, const Vector3d& D, DBL h1, DB
 
             k = (-b - d) / a;
 
-            if ((k > gkDBL_epsilon) && (k < MAX_DISTANCE))
+            if (k > gkDBL_epsilon)
             {
                 h = P[Y] + k * D[Y];
 
