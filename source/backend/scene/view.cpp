@@ -808,8 +808,8 @@ void View::StartRender(POVMS_Object& renderOptions)
         throw POV_EXCEPTION(kParamErr, "Invalid end column or row");
 
     viewData.blockSize = renderOptions.TryGetInt(kPOVAttrib_RenderBlockSize, 32);
-    if(viewData.blockSize < 4)
-        viewData.blockSize = 4;
+    if(viewData.blockSize > 0)        // 4
+        viewData.blockSize = 1;       // 4 Hard code to 1x1 for depth map version
     if(viewData.blockSize > max(viewData.renderArea.GetWidth(), viewData.renderArea.GetHeight()))
         viewData.blockSize = max(viewData.renderArea.GetWidth(), viewData.renderArea.GetHeight());
     viewData.blockWidth = ((viewData.renderArea.GetWidth() + viewData.blockSize - 1) / viewData.blockSize);
@@ -854,7 +854,8 @@ void View::StartRender(POVMS_Object& renderOptions)
     viewData.SetNextRectangle(*blockskiplist, nextblock);
 
     // render thread count
-    int maxRenderThreads = renderOptions.TryGetInt(kPOVAttrib_MaxRenderThreads, 1);
+  //int maxRenderThreads = renderOptions.TryGetInt(kPOVAttrib_MaxRenderThreads, 1);
+    int maxRenderThreads = 1;                                                       // Hard code to one for depthmap hack
 
     viewData.realTimeRaytracing = renderOptions.TryGetBool(kPOVAttrib_RealTimeRaytracing, false); // TODO - experimental code
     if (viewData.realTimeRaytracing)

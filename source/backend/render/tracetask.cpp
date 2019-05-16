@@ -291,12 +291,17 @@ void TraceTask::Run()
     do
     {
 #endif
-        switch(tracingMethod)
+
+        InitStringToFile((boost::format("P2")).str());
+        DebugStringToFile((boost::format("%u\n") % GetViewData()->GetWidth()).str());
+        DebugStringToFile((boost::format("%u\n") % GetViewData()->GetHeight()).str());
+      //switch(tracingMethod)  // With DepthMap version of POV-Ray allow only simple rays.
+        switch(0)
         {
             case 0:
-                if(previewSize > 0)
-                    SimpleSamplingM0P();
-                else
+              //if(previewSize > 0)
+              //    SimpleSamplingM0P();
+              //else
                     SimpleSamplingM0();
                 break;
             case 1:

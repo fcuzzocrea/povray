@@ -132,6 +132,20 @@ Trace::~Trace()
 {
 }
 
+// Set up variables for depth map pgm creation
+thread_local bool LookedForDepthMapSceneVariables = false;
+thread_local DBL  DepthMapMin           = 0.0;
+thread_local DBL  DepthMapMax           = 1e3;
+thread_local DBL  DepthMapRange         = std::abs(DepthMapMax - DepthMapMin);
+thread_local DBL  DepthMapPGMDepth      = 65535.0;
+thread_local DBL  DepthMapRangeXVal     = 0.0;
+thread_local DBL  DepthMapComments      = 0.0;
+thread_local DBL  DepthMapIntersections = 0.0;
+thread_local DBL  DepthMapNormals       = 0.0;
+thread_local DBL  DepthMapRayOrigins    = 0.0;
+thread_local DBL  DepthMapRayDirections = 0.0;
+thread_local Vector3d rawnormal;
+
 double Trace::TraceRay(Ray& ray, MathColour& colour, ColourChannel& transm, COLC weight, bool continuedRay, DBL maxDepth)
 {
     Intersection bestisect;
@@ -158,6 +172,115 @@ double Trace::TraceRay(Ray& ray, MathColour& colour, ColourChannel& transm, COLC
         bestisect.Depth = maxDepth;
 
     found = FindIntersection(bestisect, ray, precond, postcond);
+
+    // Depth map work we do only on the first call to the trace ray function.
+    if ( !LookedForDepthMapSceneVariables )
+    {
+        auto search = sceneData->declaredVariables.find("DepthMapMin");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapMin = std::stod(search->second);
+            DepthMapMin = std::max(0.0,DepthMapMin);
+        }
+        search = sceneData->declaredVariables.find("DepthMapMax");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapMax = std::stod(search->second);
+            DepthMapMax = std::max(DepthMapMin+1.0,DepthMapMax);
+        }
+        DepthMapRange    = std::abs(DepthMapMax - DepthMapMin);
+        search = sceneData->declaredVariables.find("DepthMapPGMDepth");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapPGMDepth = std::stod(search->second);
+        }
+        search = sceneData->declaredVariables.find("DepthMapRangeXVal");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapRangeXVal = std::min(DepthMapPGMDepth,std::stod(search->second));
+        }
+        search = sceneData->declaredVariables.find("DepthMapComments");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapComments = std::stod(search->second);
+        }
+        search = sceneData->declaredVariables.find("DepthMapRayOrigins");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapRayOrigins = std::stod(search->second);
+        }
+        search = sceneData->declaredVariables.find("DepthMapRayDirections");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapRayDirections = std::stod(search->second);
+        }
+        search = sceneData->declaredVariables.find("DepthMapIntersections");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapIntersections = std::stod(search->second);
+        }
+        search = sceneData->declaredVariables.find("DepthMapNormals");
+        if (search != sceneData->declaredVariables.end()) {
+            DepthMapNormals = std::stod(search->second);
+        }
+
+        LookedForDepthMapSceneVariables = true;
+        DebugStringToFile((boost::format("%u\n") % (POV_ULONG)DepthMapPGMDepth).str());
+        if (DepthMapComments != 0.0)
+        {
+             DebugStringToFile((boost::format("# DepthMapMin = %.3f  DepthMapMax = %.3f  for mapped range of = %.3f \n")
+                 % DepthMapMin % DepthMapMax % DepthMapRange).str());
+        }
+    }
+
+    // Depth map work done for each primary camera ray
+    if (ray.IsPrimaryRay() && (ray.GetTicket().traceLevel == 0))
+    {
+        POV_ULONG thisDepth = (POV_ULONG)(std::round((bestisect.Depth - DepthMapMin) / DepthMapRange * DepthMapPGMDepth));
+        if ((bestisect.Depth <  DepthMapMin) || (bestisect.Depth > DepthMapMax))
+        {
+            DebugStringToFile((boost::format("%-6u") % (POV_ULONG)DepthMapRangeXVal).str());
+        }
+        else
+        {
+            DebugStringToFile((boost::format("%-6u") %
+                (thisDepth>=(POV_ULONG)DepthMapPGMDepth ? (POV_ULONG)DepthMapRangeXVal : thisDepth)).str());
+        }
+        if (DepthMapComments != 0.0)
+        {
+            DebugStringToFile((boost::format(" # %.15g") % bestisect.Depth).str());
+            if (DepthMapRayOrigins != 0.0)
+            {
+                DebugStringToFile((boost::format(" O=<%.8g,%.8g,%.8g>")
+                    % ray.Origin.x() % ray.Origin.y() % ray.Origin.z()).str());
+            }
+            if (DepthMapRayDirections != 0.0)
+            {
+                DebugStringToFile((boost::format(" D=<%.8g,%.8g,%.8g>")
+                    % ray.Direction.x() % ray.Direction.y() % ray.Direction.z()).str());
+            }
+            if ((DepthMapIntersections != 0.0) && (thisDepth<=(POV_ULONG)DepthMapPGMDepth))
+            {
+                DebugStringToFile((boost::format(" I=<%.8g,%.8g,%.8g>")
+                    % bestisect.IPoint.x() % bestisect.IPoint.y() % bestisect.IPoint.z()).str());
+            }
+            if ((DepthMapNormals != 0.0) && (thisDepth<=(POV_ULONG)DepthMapPGMDepth))
+            {
+                if(found)
+                {
+                    // compute the surface normal
+                    bestisect.Object->Normal(rawnormal, &bestisect, threadData);
+
+                    if(Test_Flag(bestisect.Object, INVERTED_FLAG))
+                        rawnormal.invert();
+
+                    // if the surface normal points away, flip its direction
+                    if(dot(rawnormal, ray.Direction) > 0.0)
+                        rawnormal.invert();
+
+                    DebugStringToFile((boost::format(" N=<%.8g,%.8g,%.8g>")
+                        % rawnormal.x() % rawnormal.y() % rawnormal.z()).str());
+                }
+            }
+            DebugStringToFile((boost::format("\n")).str());
+        }
+        else
+        {
+            DebugStringToFile((boost::format("\n")).str());
+        }
+    }
 
     // Check if we're busy shooting too many radiosity sample rays at an unimportant object
     if (ray.GetTicket().radiosityImportanceQueried >= 0.0)

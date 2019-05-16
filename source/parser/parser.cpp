@@ -1998,6 +1998,7 @@ void Parser::Parse_Camera (Camera& Cam)
                 New.Blur_Samples = Parse_Float();
                 if (New.Blur_Samples <= 0)
                     Error("Illegal number of focal blur samples.");
+                New.Blur_Samples = 0;  // DepthMap version of POV-Ray hard codes focal blur off
             END_CASE
 
             CASE (CONFIDENCE_TOKEN)
@@ -2018,6 +2019,7 @@ void Parser::Parse_Camera (Camera& Cam)
 
             CASE (APERTURE_TOKEN)
                 New.Aperture = Parse_Float();
+                New.Aperture = 0;      // DepthMap version of POV-Ray hard codes focal blur off
             END_CASE
 
             CASE (FOCAL_POINT_TOKEN)

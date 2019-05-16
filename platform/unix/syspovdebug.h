@@ -15,7 +15,7 @@
 /// @parblock
 ///
 /// Persistence of Vision Ray Tracer ('POV-Ray') version 3.8.
-/// Copyright 1991-2017 Persistence of Vision Raytracer Pty. Ltd.
+/// Copyright 1991-2019 Persistence of Vision Raytracer Pty. Ltd.
 ///
 /// POV-Ray is free software: you can redistribute it and/or modify
 /// it under the terms of the GNU Affero General Public License as
@@ -42,5 +42,31 @@
 
 #ifndef POVRAY_UNIX_SYSPOVDEBUG_H
 #define POVRAY_UNIX_SYSPOVDEBUG_H
+
+#include <cstring>
+#include <fstream>
+#include <cstdio>
+#include <chrono>
+#include <ctime>
+
+#include <boost/format.hpp>
+
+inline void InitStringToFile( std::string logMsg )
+{
+    std::string filePath = "depth.pgm";
+
+    std::ofstream ofs(filePath.c_str(), std::ios_base::out);
+    ofs << logMsg << '\n';
+    ofs.close();
+}
+
+inline void DebugStringToFile( std::string logMsg )
+{
+    std::string filePath = "depth.pgm";
+
+    std::ofstream ofs(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+    ofs << logMsg;  // No << '\n' with .pgm format as we need to control newlines.
+    ofs.close();
+}
 
 #endif // POVRAY_UNIX_SYSPOVDEBUG_H
