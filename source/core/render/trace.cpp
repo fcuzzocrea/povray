@@ -184,7 +184,8 @@ double Trace::TraceRay(Ray& ray, MathColour& colour, ColourChannel& transm, COLC
         search = sceneData->declaredVariables.find("DepthMapMax");
         if (search != sceneData->declaredVariables.end()) {
             DepthMapMax = std::stod(search->second);
-            DepthMapMax = std::max(DepthMapMin+1.0,DepthMapMax);
+            if (DepthMapMax <= DepthMapMin)
+                DepthMapMax = std::max(DepthMapMin+1,DepthMapMax);
         }
         DepthMapRange    = std::abs(DepthMapMax - DepthMapMin);
         search = sceneData->declaredVariables.find("DepthMapPGMDepth");
@@ -236,7 +237,7 @@ double Trace::TraceRay(Ray& ray, MathColour& colour, ColourChannel& transm, COLC
         else
         {
             DebugStringToFile((boost::format("%-6u") %
-                (thisDepth>=(POV_ULONG)DepthMapPGMDepth ? (POV_ULONG)DepthMapRangeXVal : thisDepth)).str());
+                (thisDepth> (POV_ULONG)DepthMapPGMDepth ? (POV_ULONG)DepthMapRangeXVal : thisDepth)).str());
         }
         if (DepthMapComments != 0.0)
         {
