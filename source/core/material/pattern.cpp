@@ -6336,10 +6336,10 @@ DBL DensityFilePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *
                     y1 = (size_t)this_y;
                     z1 = (size_t)this_z;
 
-                    rx[3]=max(0,(int)x1);   ry[3]=max(0,(int)y1);   rz[3]=max(0,(int)z1);
-                    rx[2]=max(0,(int)x1-1); ry[2]=max(0,(int)y1-1); rz[2]=max(0,(int)z1-1);
-                    rx[1]=max(0,(int)x1-2); ry[1]=max(0,(int)y1-2); rz[1]=max(0,(int)z1-2);
-                    rx[0]=max(0,(int)x1-3); ry[0]=max(0,(int)y1-3); rz[0]=max(0,(int)z1-3);
+                    rx[3]=max((size_t)0,x1);   ry[3]=max((size_t)0,y1);   rz[3]=max((size_t)0,z1);
+                    rx[2]=max((size_t)0,x1-1); ry[2]=max((size_t)0,y1-1); rz[2]=max((size_t)0,z1-1);
+                    rx[1]=max((size_t)0,x1-2); ry[1]=max((size_t)0,y1-2); rz[1]=max((size_t)0,z1-2);
+                    rx[0]=max((size_t)0,x1-3); ry[0]=max((size_t)0,y1-3); rz[0]=max((size_t)0,z1-3);
                     //---
                     rx[4]=min(Data->Sx-1,x1+1); ry[4]=min(Data->Sy-1,y1+1); rz[4]=min(Data->Sz-1,z1+1);
                     rx[5]=min(Data->Sx-1,x1+2); ry[5]=min(Data->Sy-1,y1+2); rz[5]=min(Data->Sz-1,z1+2);
@@ -6440,10 +6440,10 @@ DBL DensityFilePattern::EvaluateRaw(const Vector3d& EPoint, const Intersection *
                     y1 = (size_t)this_y;
                     z1 = (size_t)this_z;
 
-                    rx[3]=max(0,(int)x1);   ry[3]=max(0,(int)y1);   rz[3]=max(0,(int)z1);
-                    rx[2]=max(0,(int)x1-1); ry[2]=max(0,(int)y1-1); rz[2]=max(0,(int)z1-1);
-                    rx[1]=max(0,(int)x1-2); ry[1]=max(0,(int)y1-2); rz[1]=max(0,(int)z1-2);
-                    rx[0]=max(0,(int)x1-3); ry[0]=max(0,(int)y1-3); rz[0]=max(0,(int)z1-3);
+                    rx[3]=max((size_t)0,x1);   ry[3]=max((size_t)0,y1);   rz[3]=max((size_t)0,z1);
+                    rx[2]=max((size_t)0,x1-1); ry[2]=max((size_t)0,y1-1); rz[2]=max((size_t)0,z1-1);
+                    rx[1]=max((size_t)0,x1-2); ry[1]=max((size_t)0,y1-2); rz[1]=max((size_t)0,z1-2);
+                    rx[0]=max((size_t)0,x1-3); ry[0]=max((size_t)0,y1-3); rz[0]=max((size_t)0,z1-3);
                     //---
                     rx[4]=min(Data->Sx-1,x1+1); ry[4]=min(Data->Sy-1,y1+1); rz[4]=min(Data->Sz-1,z1+1);
                     rx[5]=min(Data->Sx-1,x1+2); ry[5]=min(Data->Sy-1,y1+2); rz[5]=min(Data->Sz-1,z1+2);
