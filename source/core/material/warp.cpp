@@ -68,7 +68,13 @@ const DBL COORDINATE_LIMIT = 1.0e17;
 enum BlackHoleType
 {
     kBlackHoleSpherical_Original=0,
-    kBlackHoleSpherical_Clamped,
+    kBlackHoleSpherical_Clamped=1,
+    kBlackHoleSpherical_ClampedXonly=2,
+    kBlackHoleSpherical_ClampedYonly=3,
+    kBlackHoleSpherical_ClampedZonly=4,
+    kBlackHoleSpherical_ClampedXwhirl=5,
+    kBlackHoleSpherical_ClampedYwhirl=6,
+    kBlackHoleSpherical_ClampedZwhirl=7
 };
 
 /*****************************************************************************
@@ -174,6 +180,17 @@ bool BlackHoleWarp::WarpPoint(Vector3d& TPoint) const
     if (LenFromCenter >= Radius)
         return true;
 
+    //--- Set up a lambda function for the whirlpool black_hole calculations.
+    DBL whirlTheta, whirlLenxy, whirlRot, whirlNewx, whirlNewy;
+    auto lambdaWhirlXYAroundZ = [&](const DBL wx, const DBL wy, const DBL wz) -> void
+    {
+        whirlTheta = atan2(wy,wx);
+        whirlLenxy = sqrt(wx*wx + wy*wy);
+        whirlRot   = whirlTheta + (S * TWO_M_PI) * (Inverted ? 1.0 : -1.0);
+        whirlNewx  = cos(whirlRot) * whirlLenxy - wx;
+        whirlNewy  = sin(whirlRot) * whirlLenxy - wy;
+    };
+
     switch (Type)
     {
         case kBlackHoleSpherical_Original:
@@ -209,6 +226,9 @@ bool BlackHoleWarp::WarpPoint(Vector3d& TPoint) const
             TPoint += DeltaCenterToPt;
             break;
         case kBlackHoleSpherical_Clamped:
+        case kBlackHoleSpherical_ClampedXonly:
+        case kBlackHoleSpherical_ClampedYonly:
+        case kBlackHoleSpherical_ClampedZonly:
             // Note: The above black_hole method doesn't clamp properly at
             // the surface of the spherical region for the inward pulling black hole.
             //
@@ -239,7 +259,53 @@ bool BlackHoleWarp::WarpPoint(Vector3d& TPoint) const
                 Delta           *= S;
             }
 
-            TPoint += Delta;
+            switch (Type)
+            {
+                case kBlackHoleSpherical_ClampedXonly:
+                    TPoint[X] += Delta[X];
+                    break;
+                case kBlackHoleSpherical_ClampedYonly:
+                    TPoint[Y] += Delta[Y];
+                    break;
+                case kBlackHoleSpherical_ClampedZonly:
+                    TPoint[Z] += Delta[Z];
+                    break;
+                default:
+                    TPoint += Delta;
+                    break;
+            }
+            break;
+        case kBlackHoleSpherical_ClampedXwhirl:
+        case kBlackHoleSpherical_ClampedYwhirl:
+        case kBlackHoleSpherical_ClampedZwhirl:
+            NormLenFromSurface = (Radius - LenFromCenter) / Radius;
+            S                  = pow(NormLenFromSurface, Power) * Strength;
+            switch (Type)
+            {
+                case kBlackHoleSpherical_ClampedXwhirl:
+                    lambdaWhirlXYAroundZ(DeltaCenterToPt[Y],DeltaCenterToPt[Z],DeltaCenterToPt[X]);
+                    Delta[Y] = whirlNewx;
+                    Delta[Z] = whirlNewy;
+                    Delta[X] = 0.0;
+                    TPoint += Delta;
+                    break;
+                case kBlackHoleSpherical_ClampedYwhirl:
+                    lambdaWhirlXYAroundZ(DeltaCenterToPt[Z],DeltaCenterToPt[X],DeltaCenterToPt[Y]);
+                    Delta[Z] = whirlNewx;
+                    Delta[X] = whirlNewy;
+                    Delta[Y] = 0.0;
+                    TPoint += Delta;
+                    break;
+                case kBlackHoleSpherical_ClampedZwhirl:
+                    lambdaWhirlXYAroundZ(DeltaCenterToPt[X],DeltaCenterToPt[Y],DeltaCenterToPt[Z]);
+                    Delta[X] = whirlNewx;
+                    Delta[Y] = whirlNewy;
+                    Delta[Z] = 0.0;
+                    TPoint += Delta;
+                    break;
+                default:
+                    break;
+            }
             break;
         default:
             break;
