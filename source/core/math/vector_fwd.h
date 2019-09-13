@@ -47,12 +47,14 @@ namespace pov
 template<typename T> class GenericVector2d;
 template<typename T> class GenericVector3d;
 
-using Vector2d      = GenericVector2d<double>;  ///< Double-precision 2D vector.
-using SnglVector2d  = GenericVector2d<float>;   ///< Single-precision 2D vector.
+using Vector2d        = GenericVector2d<DBL>;           ///< Double-precision 2D vector.
+using SnglVector2d    = GenericVector2d<SNGL>;          ///< Single-precision 2D vector.
+using PreciseVector2d = GenericVector2d<PRECISE_FLOAT>; ///< >= Double-precision 2D.
 
-using Vector3d      = GenericVector3d<double>;  ///< Double-precision 3D vector.
-using SnglVector3d  = GenericVector3d<float>;   ///< Single-precision 3D vector.
-using IntVector3d   = GenericVector3d<int>;     ///< Integer 3D vector.
+using Vector3d        = GenericVector3d<DBL>;           ///< Double-precision 3D vector.
+using SnglVector3d    = GenericVector3d<SNGL>;          ///< Single-precision 3D vector.
+using PreciseVector3d = GenericVector3d<PRECISE_FLOAT>; ///< >= Double-precision 3D vector.
+using IntVector3d     = GenericVector3d<int>;           ///< Integer 3D vector.
 
 }
 // end of namespace pov

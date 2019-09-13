@@ -547,9 +547,11 @@ class GenericVector3d final
         VECTOR_T vect;
 };
 
+/// @note Believe most of these are redundant given the using definitions are in
+/// vector_fwd.h. Thinking Matrix3x3 could perhaps be in *_fwd file too?
 typedef GenericVector2d<DBL> Vector2d;                  ///< Double-precision 2D vector.
 typedef GenericVector2d<SNGL> SnglVector2d;             ///< Single-precision 2D vector.
-typedef GenericVector2d<PRECISE_FLOAT> PreciseVector2d; ///< >= Double-precision 2D. 
+typedef GenericVector2d<PRECISE_FLOAT> PreciseVector2d; ///< >= Double-precision 2D.
 
 typedef GenericVector3d<DBL> Vector3d;                  ///< Double-precision 3D vector.
 typedef GenericVector3d<SNGL> SnglVector3d;             ///< Single-precision 3D vector.
