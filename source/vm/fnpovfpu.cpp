@@ -980,16 +980,23 @@ unsigned int FunctionVM::AddConstant(DBL v)
 {
     unsigned int i;
 
-    for(i = 0; i < consts.size(); i++)
-    {
-        if(consts[i] == v)
-            return (unsigned int)i;
-    }
+    /// @note Code below causes extreme slowness where the VM is getting used
+    /// in the parser to, for example, place a pattern of spheres.
+    /// Commenting the code below also makes refugular isosurfaces
+    /// faster too thus far though by a lessor magnitude. Storage where measured
+    /// not different. If there is a reason for the code below, not found it -
+    /// and there are better methods.
+    /// Leaving as commented for now because somebody added it - perhaps for reasons.
+//  for(i = 0; i < consts.size(); i++)
+//  {
+//      if(consts[i] == v)
+//          return (unsigned int)i;
+//  }
 
     if(consts.size() == MAX_K)
         throw POV_EXCEPTION_STRING("More than 1048576 constants in all functions are not supported.");
 
-    consts.push_back(v);
+    consts.emplace_back(v);
 
     return consts.size() - 1;
 }
