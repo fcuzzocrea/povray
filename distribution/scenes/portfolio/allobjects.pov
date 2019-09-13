@@ -969,10 +969,10 @@ global_settings {
          //    r: radius of the spheres.
          //    s: scalefactor for the radius of the spheres.
          //
-         // The center of the sphere is at the origin, the spheres are centerd on the
-         // raduis ru1. ru1 is determined by the number and size of the spheres.
+         // The center of the sphere is at the origin, the spheres are centered on the
+         // radius ru1. ru1 is determined by the number and size of the spheres.
          // The scalefactor gives the possibility to vary the size of the spheres, and 
-         // keep the same radius ru1. Normaly s=1.
+         // keep the same radius ru1. Normally s=1.
          //
          // In the scene, use r_ConnectSpheres inside an object, union or merge statement:
          // object{Sphere_Of_Cylinders(50,0.1,3) pigment{White}}
@@ -984,11 +984,11 @@ global_settings {
            #local Rot2=0;  
            #local n1=n;
            #declare ru1=ru;
-           #while (n >0)
+           #while (Rot2<=90)
              #local Tz=(sin(radians(Rot2))*ru1);
              #local Count=0;
              #local Rot1=0;
-             #while (Count<=n+1)
+             #while (Count<n)
                sphere{
                  0,r*s
                  translate <(cos(radians(Rot1)))*ru,Tz,(sin(radians(Rot1))*ru)>
@@ -1004,8 +1004,16 @@ global_settings {
              #end //while
              #local Rot2=Rot2+(360/n1);
              #local ru= (cos(radians(Rot2)))*ru1;
-             #local n=int(180/degrees(asin(r/ru)));
-             //#local ru= r/sin(radians(180/n));
+	     #if(ru>=r)
+               #local n=int(180/degrees(asin(r/ru)));
+               //#local ru= r/sin(radians(180/n));
+	     #elseif(ru>=0)
+	       #local Rot2=90;
+	       #local ru=0;
+	       #local n=1;
+	     #else
+	       #local n=0;
+	     #end
            #end //while
          #end //macro
          

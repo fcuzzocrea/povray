@@ -51,7 +51,7 @@ union{
 }
 
 union{
- text{ttf Font concat("I=int(F)",str(I,0,2)),0.1,0 translate TFudge}
+ text{ttf Font concat("I=int(F)=",str(I,0,2)),0.1,0 translate TFudge}
  sphere {<I,-0.5,0>,Rad}
  pigment{Cyan} translate -2*y
 }

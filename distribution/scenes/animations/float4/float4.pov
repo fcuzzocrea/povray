@@ -63,7 +63,7 @@ union {
        translate (C+0.3)*y
        rotate z*b_Degrees
       }
-  text{ttf Font concat("b=atan2(B,C)=",str(Angle_b,1,2)),0.1,0 translate <-9,-1,0> pigment{Magenta*.7}}
+  text{ttf Font concat("b=atan2(B,A)=",str(Angle_b,1,2)),0.1,0 translate <-9,-1,0> pigment{Magenta*.7}}
   text{ttf Font concat("degrees(b)=",str(b_Degrees,1,2)),0.1,0 translate <-8.5,-2,0> pigment{Magenta*.7}}
 
   translate x-y

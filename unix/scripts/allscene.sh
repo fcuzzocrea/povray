@@ -11,6 +11,7 @@
 # calling conventions:
 #
 #   allscene.sh [log] [all] [-d scene_directory] [-o output_directory]
+#               [-h html_file]
 #
 # output_directory: if specified all images are written to this directory
 #                   if not specified the images are written into the scene 
@@ -33,7 +34,7 @@
 # test mode
 #SCENE_DIR=.
 
-VERSION=`povray --generation`
+VERSION=`povray --generation`  ;# Assumes default install ? 
 VER_DIR=povray-$VERSION
 DEFAULT_DIR=/usr/local
 SYSCONFDIR=$DEFAULT_DIR/etc
@@ -54,7 +55,7 @@ install_dir()
   fi
 }
 
-OPTIONS="$1 $2 $3 $4 $5 $6"
+OPTIONS="$1 $2 $3 $4 $5 $6 $7 $8"
 
 case "$OPTIONS" in
   *log* | *LOG* | *Log* )
@@ -72,6 +73,8 @@ test "$2" = "-d" && SCENE_DIR="$3"
 test "$3" = "-d" && SCENE_DIR="$4"
 test "$4" = "-d" && SCENE_DIR="$5" 
 test "$5" = "-d" && SCENE_DIR="$6"
+test "$6" = "-d" && SCENE_DIR="$7"
+test "$7" = "-d" && SCENE_DIR="$8"
 
 if [ -z "$SCENE_DIR" ] ; then
   INSTALL_DIR="`install_dir`"
@@ -107,6 +110,8 @@ test "$2" = "-o" && OUTPUT_DIR="$3"
 test "$3" = "-o" && OUTPUT_DIR="$4"
 test "$4" = "-o" && OUTPUT_DIR="$5" 
 test "$5" = "-o" && OUTPUT_DIR="$6"
+test "$6" = "-o" && OUTPUT_DIR="$7"
+test "$7" = "-o" && OUTPUT_DIR="$8"
 
 if [ -z "$OUTPUT_DIR" ] ; then
   if [ ! -w "$SCENE_DIR" ] ; then
@@ -142,6 +147,7 @@ test "$3" = "-h" && HTML_FILE="$4"
 test "$4" = "-h" && HTML_FILE="$5"
 test "$5" = "-h" && HTML_FILE="$6"
 test "$6" = "-h" && HTML_FILE="$7"
+test "$7" = "-h" && HTML_FILE="$8"
 
 if [ ! -z "$HTML_FILE" ] ; then
 
