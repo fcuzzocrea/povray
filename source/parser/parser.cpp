@@ -43,6 +43,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
 
 // C++ standard header files
 #include <algorithm>
@@ -1933,17 +1934,22 @@ void Parser::Parse_Camera (Camera& Cam)
                 Parse_Vector (New.Look_At);
                 New.Direction = New.Look_At - New.Location;
 
+                Warning("CASE LOOK_AT_TOKEN : NEW DIRECTION IS %d %d %d", New.Direction[1], New.Direction[2], New.Direction[3]);
+
                 // Check for zero length direction vector.
                 if (New.Direction.lengthSqr() < EPSILON)
                     Error("Camera location and look_at point must be different.");
 
                 New.Direction.normalize();
+                
+                Warning("CASE LOOK_AT_TOKEN : NEW DIRECTION AFTER NORMALIZATION IS %d %d %d", New.Direction[1], New.Direction[2], New.Direction[3]);
 
                 // Save Right vector
                 tempv = New.Right;
 
                 New.Right = cross(New.Sky, New.Direction);
-
+                Warning("CASE LOOK_AT_TOKEN : NEW RIGHT IS %d %d %d", New.Right[1], New.Right[2], New.Right[3]);
+                
                 // Avoid DOMAIN error (from Terry Kanakis)
                 if((fabs(New.Right[X]) < EPSILON) &&
                    (fabs(New.Right[Y]) < EPSILON) &&
@@ -1954,19 +1960,32 @@ void Parser::Parse_Camera (Camera& Cam)
                 }
 
                 New.Right.normalize();
+                
+                Warning("CASE LOOK_AT_TOKEN : NEW RIGHT AFTER NORMALIZATION IS %d %d %d", New.Right[1], New.Right[2], New.Right[3]);
+                
                 New.Up = cross(New.Direction, New.Right);
+                
+                Warning("CASE LOOK_AT_TOKEN : NEW UP IS %d %d %d", New.Up[1], New.Up[2], New.Up[3]);
+
                 New.Direction *= Direction_Length;
+
+                Warning("CASE LOOK_AT_TOKEN : NEW DIRECTION AFTER MULIPLICATION PER DIRECTION_LENGHT IS %d %d %d", New.Direction[1], New.Direction[2], New.Direction[3]);
 
                 if (Handedness > 0.0)
                 {
                     New.Right *= Right_Length;
+                    Warning("CASE LOOK_AT_TOKEN : LEFT HANDED: NEW RIGHT NEW RIGHT DIRECTION AFTER MULTIPLICATION PER RIGHT_LENGHT IS %d %d %d", New.Right[1], New.Right[2], New.Right[3]);
                 }
                 else
                 {
                     New.Right *= -Right_Length;
+                    Warning("CASE LOOK_AT_TOKEN : RIGHT HANDED: NEW RIGHT AFTER MULTIPLICATION PER RIGHT_LENGHT IS %d %d %d", New.Right[1], New.Right[2], New.Right[3]);
                 }
 
                 New.Up *= Up_Length;
+                
+                Warning("CASE LOOK_AT_TOKEN : NEW UP AFTER MULTIPLICATION PER UP_LENGHT IS %d %d %d", New.Up[1], New.Up[2], New.Up[3]);
+                
             END_CASE
 
             CASE (TRANSLATE_TOKEN)
